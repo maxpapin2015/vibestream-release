@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIBESTREAM RELEASE — Скачать плеер</title>
+  <style>
+    :root {
+      --bg: #070709;
+      --panel: #121218;
+      --panel-2: #181821;
+      --border: rgba(255, 255, 255, 0.10);
+      --text: #F4F4F6;
+      --muted: #9A9AA6;
+      --accent: #1DB954;
+      --accent-hover: #1ED760;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      background: radial-gradient(circle at top left, rgba(29, 185, 84, 0.18), transparent 45%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 64px;
+    }
+    .container {
+      width: 100%;
+      max-width: 860px;
+    }
+    .hero {
+      background: linear-gradient(135deg, rgba(29, 185, 84, 0.24), rgba(20, 20, 28, 0.92));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #070709;
+      background: var(--accent);
+      padding: 5px 10px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      margin-bottom: 22px;
+      max-width: 640px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: 0.15s ease;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #070709;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      background: #22222E;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .card h3 {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+    .card p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .steps {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .steps h2 {
+      font-size: 17px;
+      margin-bottom: 12px;
+    }
+    .steps ol {
+      padding-left: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="badge">VIBESTREAM RELEASE</div>
+      <h1>VIBESTREAM RELEASE</h1>
+      <p class="subtitle">
+        Настольный музыкальный плеер на Python и PyQt6: безрамочный мини-плеер в правом нижнем углу при закрытии окна,
+        непрерывный повтор одного трека (<code>1x LOOP</code>), прослушивание выбранного плейлиста, лайки, оценки 1–5 звёзд,
+        синхронизированные тексты, 10-полосный эквалайзер и офлайн-кэш.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="./dist/VIBESTREAM%20RELEASE.exe" download>Скачать VIBESTREAM RELEASE.exe</a>
+        <a class="btn btn-secondary" href="./VIBESTREAM_RELEASE_v10_2.zip" download>Скачать архив исходников (.ZIP)</a>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Безрамочный мини-плеер</h3>
+        <p>При закрытии главного окна появляется компактное окно в правом нижнем углу с таймером, секундами, перемоткой, лайком и переключением треков.</p>
+      </div>
+      <div class="card">
+        <h3>Плейлисты и повтор трека</h3>
+        <p>Выберите плейлист и слушайте его треки, либо включите <code>1x LOOP</code>, чтобы выбранная песня играла по кругу непрерывно.</p>
+      </div>
+      <div class="card">
+        <h3>Лайки, эквалайзер и тексты</h3>
+        <p>Ставьте лайки в основном окне и в мини-плеере, оценивайте треки звёздами, смотрите тексты песен и настраивайте 10-полосный эквалайзер.</p>
+      </div>
+    </section>
+
+    <section class="steps">
+      <h2>Как запустить или собрать</h2>
+      <ol>
+        <li>Если рядом лежит <code>dist/VIBESTREAM RELEASE.exe</code> — нажмите кнопку скачивания выше и запустите файл.</li>
+        <li>Для сборки <code>.exe</code> из исходников запустите <code>BUILD_RELEASE.bat</code>.</li>
+        <li>Для быстрой отправки проекта в GitHub запустите <code>PUBLISH_GITHUB.bat</code>.</li>
+      </ol>
+    </section>
+  </div>
+</body>
+</html>

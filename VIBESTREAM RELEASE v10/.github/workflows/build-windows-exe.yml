@@ -1,0 +1,29 @@
+name: Build VibeStream Windows EXE
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Generate icon and build EXE
+        run: |
+          python make_icon.py
+          python -m PyInstaller --clean --noconfirm --onefile --windowed --name "VibeStream" --icon "vibestream.ico" --paths "." --add-data "vibestream;vibestream" --collect-all "yt_dlp" --hidden-import "vibestream.ui.main_window" --hidden-import "vibestream.ui.mini_player" --hidden-import "vibestream.ui.visualizer" --hidden-import "vibestream.ui.styles" --hidden-import "vibestream.ui.icons" --hidden-import "vibestream.ui.star_rating" --hidden-import "vibestream.core.storage" --hidden-import "vibestream.core.music_provider" --hidden-import "PyQt6.QtMultimedia" --hidden-import "PyQt6.QtNetwork" main.py
+      - name: Upload VibeStream.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VibeStream-Windows-x64
+          path: dist/VibeStream.exe

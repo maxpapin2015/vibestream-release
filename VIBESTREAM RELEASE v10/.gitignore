@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+*.spec
+vibestream.ico
+.DS_Store
+Thumbs.db
