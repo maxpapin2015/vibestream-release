@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VibeStream — слушай без рекламы | Тёмный Принц — Овердоз</title>
+<meta name="description" content="VibeStream: стриминг без рекламы, 10-полосный эквалайзер, синхронный текст. Живое превью: Тёмный Принц — Овердоз.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23050706'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%231db954' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%231db954'/%3E%3C/svg%3E">
+<!--
+  VibeStream • single-file landing + live preview
+  ── Настройки:
+     • DEFAULT_YT_ID — вставьте точный videoId YouTube (если известен), иначе работает поиск через IFrame API.
+     • Скриншоты: положите файлы screens/screen1.png … screens/screen4.png рядом с index.html,
+       иначе автоматически показываются встроенные SVG-моки.
+     • Текст песни «Овердоз» загружается в рантайме из LRCLIB (synced LRC) + кэш localStorage + ручной LRC-редактор.
+-->
+<style>
+:root{
+  --bg:#050706; --panel:#0a0d0c; --panel2:#111614; --panel3:#161c19;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --acc:#1db954; --acc2:#22c55e; --acc-soft:rgba(29,185,84,.14);
+  --txt:#e9f0ed; --mut:#93a39c; --mut2:#6d7d76; --danger:#f87171;
+  --r:14px; --rs:10px;
+  font-size:16px;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg); color:var(--txt); font-family:"Inter","Segoe UI",system-ui,-apple-system,Roboto,sans-serif; overflow-x:hidden}
+body::before{content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:radial-gradient(900px 420px at 85% -60px, rgba(29,185,84,.10), transparent 60%),
+             radial-gradient(700px 380px at -10% 30%, rgba(29,185,84,.05), transparent 60%);}
+.wrap{max-width:1440px; margin:0 auto; padding:0 20px; position:relative; z-index:1}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r)}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+input,select,textarea{font-family:inherit; color:var(--txt); background:var(--panel2); border:1px solid var(--line); border-radius:var(--rs); outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+::selection{background:var(--acc); color:#04140a}
+::-webkit-scrollbar{width:9px;height:9px} ::-webkit-scrollbar-thumb{background:#202825;border-radius:8px} ::-webkit-scrollbar-track{background:transparent}
+a{color:inherit}
+
+/* ── header ── */
+#topbar{position:sticky; top:0; z-index:60; backdrop-filter:blur(14px); background:rgba(5,7,6,.82); border-bottom:1px solid var(--line)}
+.tb-in{display:flex; align-items:center; gap:18px; height:62px}
+.logo{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.14em; font-size:15px}
+.logo .dot{width:11px;height:11px;border-radius:50%;background:var(--acc); box-shadow:0 0 12px var(--acc)}
+.badge-noads{font-size:10px; font-weight:700; letter-spacing:.08em; color:var(--acc); background:var(--acc-soft); border:1px solid rgba(29,185,84,.35); padding:3px 8px; border-radius:6px}
+.tb-nav{display:flex; gap:4px; margin-left:auto}
+.tb-nav a{padding:8px 12px; border-radius:9px; color:var(--mut); text-decoration:none; font-size:13.5px; font-weight:600; transition:.2s}
+.tb-nav a:hover{color:var(--txt); background:var(--panel2)}
+.lang{display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden}
+.lang button{padding:7px 11px; font-size:12px; font-weight:700; color:var(--mut)}
+.lang button.on{background:var(--acc); color:#04140a}
+.gh-btn{display:flex; align-items:center; gap:7px; padding:8px 13px; border:1px solid var(--line); border-radius:9px; font-size:12.5px; font-weight:700; color:var(--mut); text-decoration:none; transition:.2s}
+.gh-btn:hover{color:var(--txt); border-color:var(--line2)}
+
+/* ── hero ── */
+#hero{padding:74px 0 46px; text-align:center}
+#hero h1{font-size:clamp(34px,5.4vw,62px); font-weight:900; letter-spacing:-.02em; line-height:1.05}
+#hero h1 em{font-style:normal; color:var(--acc)}
+#hero p.sub{margin:16px auto 0; max-width:640px; color:var(--mut); font-size:16px; line-height:1.65}
+.hero-cta{display:flex; gap:12px; justify-content:center; margin-top:28px; flex-wrap:wrap}
+.btn{display:inline-flex; align-items:center; gap:9px; padding:13px 22px; border-radius:11px; font-weight:800; font-size:14px; letter-spacing:.02em; transition:transform .18s, box-shadow .18s, background .18s; text-decoration:none}
+.btn-acc{background:var(--acc); color:#04140a; box-shadow:0 8px 26px rgba(29,185,84,.28)}
+.btn-acc:hover{transform:translateY(-2px); box-shadow:0 12px 32px rgba(29,185,84,.4)}
+.btn-ghost{border:1px solid var(--line2); color:var(--txt); background:var(--panel)}
+.btn-ghost:hover{transform:translateY(-2px); border-color:var(--acc)}
+.hero-stats{display:flex; gap:34px; justify-content:center; margin-top:36px; flex-wrap:wrap}
+.hstat b{display:block; font-size:24px; font-weight:900; color:var(--acc)}
+.hstat span{font-size:12px; color:var(--mut); letter-spacing:.06em; text-transform:uppercase}
+
+/* ── app shell ── */
+#player{padding:10px 0 30px}
+.app-grid{display:grid; grid-template-columns:250px minmax(0,1fr) 348px; gap:14px; align-items:start}
+.sidebar{padding:14px; position:sticky; top:76px}
+.side-item{display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:10px 12px; border-radius:10px; color:var(--mut); font-size:13.5px; font-weight:600; transition:.18s; border:1px solid transparent}
+.side-item:hover{color:var(--txt); background:var(--panel2)}
+.side-item.on{color:var(--txt); background:var(--acc-soft); border-color:rgba(29,185,84,.4)}
+.side-item .ic{width:17px; text-align:center; color:var(--acc); font-size:14px}
+.side-cap{display:flex; align-items:center; justify-content:space-between; margin:16px 6px 6px; font-size:10.5px; letter-spacing:.14em; color:var(--mut2); font-weight:800}
+.side-cap button{width:22px;height:22px;border-radius:6px;border:1px solid var(--line); color:var(--mut); font-size:13px; line-height:1}
+.side-cap button:hover{color:var(--acc); border-color:var(--acc)}
+.pls-item{display:flex; justify-content:space-between; gap:8px; width:100%; padding:8px 12px; border-radius:9px; color:var(--mut); font-size:13px; text-align:left}
+.pls-item:hover{background:var(--panel2); color:var(--txt)}
+.pls-item span{color:var(--mut2); font-size:11.5px}
+.side-foot{margin-top:14px; border-top:1px solid var(--line); padding-top:12px; display:grid; gap:10px}
+.side-foot .btn{padding:9px 12px; font-size:12.5px; justify-content:center}
+.acc-row{display:flex; align-items:center; gap:9px; font-size:10.5px; letter-spacing:.12em; color:var(--mut2); font-weight:800}
+.acc-row select{flex:1; padding:8px; font-size:12.5px; color:var(--txt)}
+
+.center{padding:16px; min-height:640px}
+.search-row{display:flex; gap:10px}
+.search-row input{flex:1; padding:12px 16px; font-size:13.5px}
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:13px}
+.chip{padding:8px 15px; border-radius:999px; border:1px solid var(--line); color:var(--mut); font-size:12.5px; font-weight:700; transition:.18s}
+.chip:hover{color:var(--txt); border-color:var(--line2)}
+.chip.on{background:var(--acc); border-color:var(--acc); color:#04140a}
+.trend{margin-top:15px; padding:18px 20px; border-radius:12px; border:1px solid rgba(29,185,84,.3);
+  background:linear-gradient(100deg, rgba(29,185,84,.16), rgba(29,185,84,.03) 55%), var(--panel2);
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap}
+.trend .k{font-size:10.5px; letter-spacing:.16em; color:var(--acc); font-weight:800}
+.trend h3{font-size:22px; font-weight:900; margin-top:3px}
+.trend .n{color:var(--mut); font-size:12.5px; margin-top:5px}
+.trend .btn{margin-left:auto}
+.chart{margin-top:14px; overflow-x:auto}
+.crow{display:grid; grid-template-columns:30px 44px minmax(150px,1.5fr) minmax(90px,1fr) 118px 92px 56px 96px; gap:10px; align-items:center; padding:9px 10px; border-radius:10px; font-size:13px}
+.chead{color:var(--mut2); font-size:10.5px; letter-spacing:.12em; font-weight:800; text-transform:uppercase}
+.crow.tr{cursor:pointer; border:1px solid transparent; transition:.15s}
+.crow.tr:hover{background:var(--panel2); border-color:var(--line)}
+.crow.tr.playing{background:var(--acc-soft); border-color:rgba(29,185,84,.35)}
+.crow .n{color:var(--mut2); font-size:12px; text-align:center}
+.crow img.cv{width:40px;height:40px;border-radius:7px; object-fit:cover; background:var(--panel3)}
+.crow .tt{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.crow .aa{color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.crow .src{color:var(--mut); font-size:12px}
+.crow .du{color:var(--mut); font-size:12px; text-align:right}
+.stars{display:flex; gap:2px}
+.stars button{font-size:14px; color:#39443f; line-height:1; padding:1px}
+.stars button.on{color:var(--acc)}
+.acts{display:flex; gap:4px; justify-content:flex-end}
+.acts button{width:27px;height:27px;border-radius:7px; color:var(--mut); font-size:13px; transition:.15s}
+.acts button:hover{color:var(--txt); background:var(--panel3)}
+.acts button.on{color:var(--acc)}
+.eq-anim{display:inline-flex; gap:2px; align-items:flex-end; height:13px}
+.eq-anim i{width:3px; background:var(--acc); border-radius:1px; animation:eqa 1s ease-in-out infinite}
+.eq-anim i:nth-child(2){animation-delay:.25s}.eq-anim i:nth-child(3){animation-delay:.5s}
+@keyframes eqa{0%,100%{height:4px}50%{height:13px}}
+
+/* ── right player panel ── */
+.ppanel{padding:14px; position:sticky; top:76px; display:flex; flex-direction:column; gap:12px; max-height:calc(100vh - 96px); overflow-y:auto}
+.ptabs{display:flex; gap:8px}
+.ptab{flex:1; padding:9px 6px; border-radius:999px; border:1px solid var(--line); color:var(--mut); font-size:12.5px; font-weight:800; transition:.18s}
+.ptab:hover{color:var(--txt)}
+.ptab.on{background:var(--acc); border-color:var(--acc); color:#04140a}
+#statusBan{display:none; padding:11px 13px; border-radius:10px; border:1px solid rgba(248,113,113,.4); background:rgba(248,113,113,.08); font-size:12.5px; color:#fecaca; line-height:1.5}
+#statusBan.show{display:block}
+#statusBan .row{display:flex; gap:8px; margin-top:9px; flex-wrap:wrap}
+#statusBan button{padding:7px 11px; border-radius:8px; background:var(--panel2); border:1px solid var(--line2); font-size:11.5px; font-weight:700; color:var(--txt)}
+.ptbody{display:none; flex-direction:column; gap:12px}
+.ptbody.on{display:flex}
+.cover{position:relative; aspect-ratio:16/10; border-radius:12px; overflow:hidden; background:var(--panel2); border:1px solid var(--line)}
+.cover img.bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.9}
+#ytHost{position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none}
+.cover.reveal #ytHost{opacity:1; pointer-events:auto}
+.cover.reveal img.bg{display:none}
+.veil{position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:flex-end; padding:9px; background:linear-gradient(180deg, transparent 55%, rgba(0,0,0,.55))}
+.cover.reveal .veil{display:none}
+.veil button{padding:7px 11px; border-radius:8px; background:rgba(5,7,6,.72); border:1px solid var(--line2); font-size:11px; font-weight:700; color:var(--txt); backdrop-filter:blur(6px)}
+.veil button:hover{border-color:var(--acc); color:var(--acc)}
+.np-title{font-size:16.5px; font-weight:800; line-height:1.35}
+.np-artist{color:var(--mut); font-size:13px; margin-top:3px}
+.np-row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.heart{width:36px;height:36px;border-radius:50%; border:1px solid var(--line); color:var(--mut); font-size:15px; transition:.15s; flex:none}
+.heart:hover{color:var(--txt); border-color:var(--line2)}
+.heart.on{color:var(--acc); border-color:var(--acc); background:var(--acc-soft)}
+.cap{font-size:10.5px; letter-spacing:.14em; color:var(--mut2); font-weight:800; text-transform:uppercase}
+#viz{display:flex; align-items:flex-end; gap:3px; height:58px; padding:4px 2px}
+#viz i{flex:1; background:var(--acc); border-radius:2px; min-height:3px; height:3px; transition:height .12s linear}
+.prow{display:flex; gap:9px}
+.prow select{padding:10px; font-size:12.5px; font-weight:700}
+.prow .btn{flex:1; justify-content:center; padding:10px; font-size:12.5px; background:var(--panel2); border:1px solid var(--line); color:var(--txt)}
+.prow .btn:hover{border-color:var(--acc); color:var(--acc)}
+.qitem{display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; cursor:pointer; transition:.15s}
+.qitem:hover{background:var(--panel2)}
+.qitem img{width:38px;height:38px;border-radius:7px}
+.qitem .qt{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.qitem .qt b{color:var(--acc); font-size:10.5px; letter-spacing:.1em; margin-right:7px}
+.qitem .qt span{color:var(--mut2); font-size:11px; margin-right:7px}
+.ytid-row{display:flex; gap:8px}
+.ytid-row input{flex:1; padding:9px 11px; font-size:12px}
+.ytid-row button{padding:9px 13px; border-radius:var(--rs); background:var(--panel2); border:1px solid var(--line); font-size:12px; font-weight:700}
+.ytid-row button:hover{border-color:var(--acc); color:var(--acc)}
+#engineBadge{font-size:11px; color:var(--mut2); display:flex; align-items:center; gap:7px}
+#engineBadge i{width:7px;height:7px;border-radius:50%;background:var(--acc); box-shadow:0 0 8px var(--acc); flex:none}
+
+/* lyrics tab */
+.lyr-tools{display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+.lyr-tools .src{font-size:10.5px; font-weight:800; letter-spacing:.08em; color:var(--acc); background:var(--acc-soft); border:1px solid rgba(29,185,84,.35); padding:4px 8px; border-radius:6px}
+.lyr-tools button{padding:6px 9px; border-radius:7px; border:1px solid var(--line); color:var(--mut); font-size:11.5px; font-weight:700}
+.lyr-tools button:hover{color:var(--txt); border-color:var(--line2)}
+.lyr-tools .off{color:var(--mut); font-size:11px; min-width:44px; text-align:center}
+.lyrbox{position:relative; height:330px; overflow-y:auto; padding:12px 10px; background:var(--panel2); border:1px solid var(--line); border-radius:11px; scroll-behavior:smooth}
+.lyrbox ol{list-style:none}
+.lyrbox li{padding:7px 10px; border-radius:8px; color:var(--mut); font-size:13.5px; line-height:1.5; cursor:pointer; transition:.18s; white-space:pre-wrap}
+.lyrbox li:hover{color:var(--txt); background:var(--panel3)}
+.lyrbox li.on{color:var(--txt); background:var(--acc-soft); box-shadow:inset 3px 0 0 var(--acc); font-weight:700}
+.lyrbox li.gap{height:14px; cursor:default; padding:0}
+#lyrEditor{display:none; flex-direction:column; gap:9px}
+#lyrEditor.show{display:flex}
+#lyrTa{width:100%; height:150px; padding:11px; font-size:12px; line-height:1.6; resize:vertical; font-family:ui-monospace,Consolas,monospace}
+.lyr-hint{font-size:11.5px; color:var(--mut2); line-height:1.55}
+
+/* eq tab */
+#eqBands{display:flex; justify-content:space-between; gap:4px; padding:16px 8px 8px; background:var(--panel2); border:1px solid var(--line); border-radius:11px}
+.band{display:flex; flex-direction:column; align-items:center; gap:9px; flex:1}
+.band .sl{height:210px; display:flex; align-items:center; justify-content:center; position:relative; width:100%}
+.band input{width:210px; transform:rotate(-90deg); appearance:none; -webkit-appearance:none; background:transparent; height:22px}
+.band input::-webkit-slider-runnable-track{height:4px; background:var(--acc); border-radius:3px}
+.band input::-webkit-slider-thumb{-webkit-appearance:none; width:15px;height:15px; border-radius:50%; background:#fff; margin-top:-5.5px; box-shadow:0 2px 8px rgba(0,0,0,.6); cursor:grab}
+.band input::-moz-range-track{height:4px; background:var(--acc); border-radius:3px}
+.band input::-moz-range-thumb{width:15px;height:15px; border:none; border-radius:50%; background:#fff; cursor:grab}
+.band label{font-size:10px; color:var(--mut2); font-weight:700}
+.band .gv{font-size:9.5px; color:var(--mut); font-variant-numeric:tabular-nums}
+#eqNote{font-size:11.5px; color:var(--mut2); line-height:1.55; border:1px dashed var(--line2); border-radius:9px; padding:9px 11px}
+
+/* ── bottom bar ── */
+.bottombar{margin-top:14px; padding:12px 18px; display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:center; position:sticky; bottom:10px; z-index:40; backdrop-filter:blur(16px); background:rgba(10,13,12,.92); box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.bb-l{display:flex; align-items:center; gap:12px; min-width:0}
+.bb-l img{width:46px;height:46px;border-radius:9px; flex:none}
+.bb-l .t{min-width:0}
+.bb-l .t b{display:block; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bb-l .t span{display:block; font-size:11.5px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bb-c{display:flex; flex-direction:column; align-items:center; gap:8px; width:min(560px,44vw)}
+.transport{display:flex; align-items:center; gap:14px}
+.transport button{color:var(--mut); transition:.15s; display:flex; align-items:center}
+.transport button:hover{color:var(--txt)}
+.transport button.on{color:var(--acc)}
+#btnPlay{width:44px;height:44px;border-radius:50%; background:#fff; color:#0a0d0c; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#btnPlay:hover{transform:scale(1.06); color:#0a0d0c}
+#btnLoop{font-size:11px; font-weight:800; padding:6px 10px; border-radius:7px; background:var(--acc); color:#04140a}
+#btnLoop.off{background:var(--panel2); color:var(--mut); border:1px solid var(--line)}
+.tl{display:flex; align-items:center; gap:10px; width:100%}
+.tl span{font-size:11px; color:var(--mut); font-variant-numeric:tabular-nums; min-width:38px}
+.tl span:last-child{text-align:right}
+input[type=range].hr{appearance:none; -webkit-appearance:none; width:100%; height:4px; border-radius:3px; background:linear-gradient(90deg,var(--acc) var(--p,0%), rgba(255,255,255,.13) var(--p,0%)); cursor:pointer}
+input[type=range].hr::-webkit-slider-thumb{-webkit-appearance:none; width:12px;height:12px;border-radius:50%;background:#fff; box-shadow:0 1px 5px rgba(0,0,0,.6)}
+input[type=range].hr::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:#fff}
+.bb-r{display:flex; align-items:center; justify-content:flex-end; gap:10px}
+.bb-r button{color:var(--mut); font-size:15px; transition:.15s; display:flex}
+.bb-r button:hover{color:var(--txt)}
+.bb-r input.hr{width:100px}
+
+/* ── landing sections ── */
+.sec-h{margin:64px 0 24px; text-align:center}
+.sec-h h2{font-size:clamp(24px,3.4vw,36px); font-weight:900; letter-spacing:-.01em}
+.sec-h p{color:var(--mut); margin-top:9px; font-size:14.5px}
+#featGrid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px}
+.fcard{padding:22px; border-radius:var(--r); border:1px solid var(--line); background:var(--panel); transition:box-shadow .25s; will-change:transform}
+.fcard:hover{box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.fcard .fi{width:42px;height:42px;border-radius:11px; background:var(--acc-soft); border:1px solid rgba(29,185,84,.35); display:flex; align-items:center; justify-content:center; color:var(--acc); font-size:18px; margin-bottom:14px}
+.fcard h3{font-size:16px; font-weight:800}
+.fcard p{color:var(--mut); font-size:13px; line-height:1.6; margin-top:8px}
+#lyrBigWrap{padding:20px; border-radius:var(--r)}
+#lyrBig{height:380px}
+.shots-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px}
+figure.shot{border-radius:var(--r); overflow:hidden; border:1px solid var(--line); background:var(--panel); cursor:zoom-in; will-change:transform}
+figure.shot img{width:100%; aspect-ratio:8/5; object-fit:cover; object-position:top; display:block; border-bottom:1px solid var(--line)}
+figure.shot figcaption{padding:12px 14px; font-size:12.5px; color:var(--mut); font-weight:600}
+#relCard{padding:26px; display:flex; gap:26px; align-items:center; flex-wrap:wrap}
+#relCard .ri{width:58px;height:58px;border-radius:15px; background:var(--acc-soft); border:1px solid rgba(29,185,84,.4); display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--acc); flex:none}
+#relCard .rt b{font-size:19px; font-weight:900}
+#relCard .rt p{color:var(--mut); font-size:13px; margin-top:5px}
+#relAssets{margin-left:auto; display:flex; gap:10px; flex-wrap:wrap}
+footer{margin:70px 0 30px; text-align:center; color:var(--mut2); font-size:12.5px; line-height:1.8}
+
+/* modals / widget / toast */
+.modal{position:fixed; inset:0; z-index:100; background:rgba(2,4,3,.9); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:26px}
+.modal.show{display:flex}
+.modal img{max-width:min(1200px,94vw); max-height:88vh; border-radius:12px; border:1px solid var(--line2); box-shadow:0 30px 90px rgba(0,0,0,.7)}
+.modal .mbox{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; width:min(560px,92vw); max-height:80vh; overflow-y:auto}
+.modal .mbox h3{font-size:17px; font-weight:900; margin-bottom:14px}
+.modal .mrow{display:flex; justify-content:space-between; gap:12px; padding:9px 4px; border-bottom:1px solid var(--line); font-size:13px}
+.modal .mrow span:first-child{color:var(--mut)}
+#miniWidget{position:fixed; right:18px; bottom:18px; z-index:80; width:230px; padding:12px; border-radius:14px; border:1px solid var(--line2); background:rgba(10,13,12,.94); backdrop-filter:blur(14px); box-shadow:0 16px 44px rgba(0,0,0,.55); display:none; gap:10px; align-items:center}
+#miniWidget.show{display:flex}
+#miniWidget img{width:38px;height:38px;border-radius:8px}
+#miniWidget .mt{flex:1; min-width:0; font-size:11.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#miniWidget button{color:var(--mut); font-size:14px}
+#miniWidget button:hover{color:var(--txt)}
+#toast{position:fixed; left:50%; bottom:96px; transform:translate(-50%,20px); z-index:120; background:var(--panel3); border:1px solid var(--line2); color:var(--txt); padding:11px 18px; border-radius:11px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:.28s; box-shadow:0 12px 34px rgba(0,0,0,.5); max-width:88vw; text-align:center}
+#toast.show{opacity:1; transform:translate(-50%,0)}
+
+/* reveal + tilt */
+.reveal{opacity:0; transform:translateY(34px); transition:opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1; transform:none}
+
+@media (max-width:1240px){
+  .app-grid{grid-template-columns:minmax(0,1fr) 330px}
+  .sidebar{display:none}
+  .shots-grid{grid-template-columns:repeat(2,1fr)}
+  #featGrid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:920px){
+  .app-grid{grid-template-columns:1fr}
+  .ppanel{position:static; max-height:none}
+  .center{min-height:0}
+  .crow{grid-template-columns:26px 40px minmax(120px,1.6fr) 108px 84px; }
+  .c-aa,.c-src,.c-act{display:none}
+  .bottombar{grid-template-columns:1fr; position:static; gap:12px}
+  .bb-c{width:100%}
+  .bb-r{justify-content:center}
+  #featGrid,.shots-grid{grid-template-columns:1fr}
+  .tb-nav{display:none}
+  #relAssets{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="wrap tb-in">
+    <div class="logo"><span class="dot"></span>VIBESTREAM <span class="badge-noads" data-i18n="noads">БЕЗ РЕКЛАМЫ</span></div>
+    <nav class="tb-nav">
+      <a href="#feat" data-i18n="nav_overview">Обзор</a>
+      <a href="#player" data-i18n="nav_player">Плеер</a>
+      <a href="#lyrics" data-i18n="nav_lyrics">Текст</a>
+      <a href="#shots" data-i18n="nav_shots">Скриншоты</a>
+      <a href="#download" data-i18n="nav_download">Скачать</a>
+    </nav>
+    <div class="lang"><button id="langRu" class="on">RU</button><button id="langEn">EN</button></div>
+    <a class="gh-btn" href="https://github.com/maxpapin2015/vibestream-release" target="_blank" rel="noopener">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      GitHub</a>
+  </div>
+</header>
+
+<section id="hero" class="wrap reveal">
+  <h1 data-i18n="hero_h">Музыка без рекламы.<br>Звук <em>твоего</em> вайба.</h1>
+  <p class="sub" data-i18n="hero_sub">VibeStream — стриминговый плеер с 10-полосным эквалайзером, синхронным текстом, офлайн-кэшем и локальными файлами. Ниже — живое превью: прямо сейчас играет «Тёмный Принц — Овердоз».</p>
+  <div class="hero-cta">
+    <button class="btn btn-acc" id="heroListen">▶ <span data-i18n="hero_cta1">Слушать «Овердоз»</span></button>
+    <a class="btn btn-ghost" href="#download" id="heroDl">⤓ <span data-i18n="hero_cta2">Скачать релиз</span></a>
+  </div>
+  <div class="hero-stats">
+    <div class="hstat"><b id="stTracks">10</b><span data-i18n="hero_s1">треков в каталоге</span></div>
+    <div class="hstat"><b>10</b><span data-i18n="hero_s2">полос эквалайзера</span></div>
+    <div class="hstat"><b>0</b><span data-i18n="hero_s3">рекламы навсегда</span></div>
+  </div>
+</section>
+
+<section id="player" class="wrap reveal">
+  <div class="app-grid">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar panel">
+      <button class="side-item on" id="navHome"><span class="ic">⌂</span><span data-i18n="side_home">Главная и чарты</span></button>
+      <button class="side-item" id="navSearch"><span class="ic">⌕</span><span data-i18n="side_search">Поиск по каталогу</span></button>
+      <button class="side-item" id="navFav"><span class="ic">♥</span><span data-i18n="side_fav">Любимые треки</span></button>
+      <button class="side-item" id="navRated"><span class="ic">★</span><span data-i18n="side_rated">Оценённые (1–5★)</span></button>
+      <button class="side-item" id="navOffline"><span class="ic">⤓</span><span data-i18n="side_offline">Офлайн-кэш</span></button>
+      <button class="side-item" id="navLocal"><span class="ic">◎</span><span data-i18n="side_local">Локальные файлы</span></button>
+      <button class="side-item" id="navHistory"><span class="ic">⌚</span><span data-i18n="side_history">История и статистика</span></button>
+      <div class="side-cap"><span data-i18n="side_pls">ПЛЕЙЛИСТЫ</span><button id="plsAdd" title="+">+</button></div>
+      <div id="plsList"></div>
+      <div class="side-foot">
+        <button class="btn btn-ghost" id="widgetBtn">◱ <span data-i18n="side_widget">Мини-виджет в углу</span></button>
+        <div class="acc-row"><span data-i18n="side_acc">АКЦЕНТ</span>
+          <select id="accentSel">
+            <option value="#1db954" data-i18n="acc1">Изумрудный (Spotify)</option>
+            <option value="#22c55e" data-i18n="acc2">Лайм</option>
+            <option value="#22d3ee" data-i18n="acc3">Циан</option>
+            <option value="#a78bfa" data-i18n="acc4">Фиолет</option>
+            <option value="#fb923c" data-i18n="acc5">Оранж</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER -->
+    <main class="center panel">
+      <div class="search-row">
+        <input id="searchInput" type="text" data-i18n-ph="search_ph" placeholder="Поиск исполнителей, треков, жанров и настроения...">
+        <button class="btn btn-acc" id="findBtn" data-i18n="btn_find">НАЙТИ</button>
+        <button class="btn btn-ghost" id="sleepBtn" data-i18n="btn_sleep">ТАЙМЕР СНА</button>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip on" data-g="all" data-i18n="chip_all">Все чарты</button>
+        <button class="chip" data-g="electronic" data-i18n="chip_el">Электроника</button>
+        <button class="chip" data-g="hiphop" data-i18n="chip_hh">Хип-хоп</button>
+        <button class="chip" data-g="rock" data-i18n="chip_rock">Рок</button>
+        <button class="chip" data-g="pop" data-i18n="chip_pop">Поп</button>
+        <button class="chip" data-g="ambient" data-i18n="chip_amb">Эмбиент / Чилл</button>
+        <button class="chip" data-g="ru" data-i18n="chip_ru">Русские хиты</button>
+        <button class="chip" data-g="phonk" data-i18n="chip_ph">Фонк / Дрифт</button>
+      </div>
+      <div class="trend">
+        <div>
+          <div class="k" data-i18n="trend_k">СТРИМИНГОВЫЙ КАТАЛОГ</div>
+          <h3 data-i18n="trend_t">В тренде сейчас</h3>
+          <div class="n" id="trendNote">Доступно треков: 10 • Бесплатно и без рекламы</div>
+        </div>
+        <button class="btn btn-acc" id="listenAll" data-i18n="trend_b">СЛУШАТЬ ВСЁ</button>
+      </div>
+      <div class="chart">
+        <div class="crow chead">
+          <div>#</div><div></div>
+          <div data-i18n="th_track">ТРЕК</div>
+          <div class="c-aa" data-i18n="th_artist">ИСПОЛНИТЕЛЬ</div>
+          <div data-i18n="th_rate">ОЦЕНКА</div>
+          <div class="c-src" data-i18n="th_src">ИСТОЧНИК</div>
+          <div class="c-src" style="text-align:right" data-i18n="th_time">ВРЕМЯ</div>
+          <div class="c-act" style="text-align:right" data-i18n="th_act">ДЕЙСТВИЯ</div>
+        </div>
+        <div id="chartRows"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT PLAYER -->
+    <aside class="ppanel panel">
+      <div class="ptabs">
+        <button class="ptab on" data-tab="now" data-i18n="tab_now">Сейчас</button>
+        <button class="ptab" data-tab="lyrics" data-i18n="tab_lyrics">Текст</button>
+        <button class="ptab" data-tab="eq" data-i18n="tab_eq">Эквалайзер</button>
+      </div>
+      <div id="statusBan"></div>
+
+      <!-- NOW -->
+      <div class="ptbody on" data-body="now">
+        <div class="cover" id="coverBox">
+          <img class="bg" id="ytThumb" alt="">
+          <div id="ytHost"></div>
+          <div class="veil"><button id="revealYt" data-i18n="show_yt">Показать YouTube-плеер</button></div>
+        </div>
+        <div class="np-row">
+          <div style="min-width:0">
+            <div class="np-title" id="nowTitle" data-i18n="np_empty">Трек не выбран</div>
+            <div class="np-artist" id="nowArtist" data-i18n="np_hint">Дважды нажмите на трек для запуска</div>
+          </div>
+          <button class="heart" id="nowHeart">♥</button>
+        </div>
+        <div>
+          <div class="cap" data-i18n="lbl_rate">ОЦЕНКА</div>
+          <div class="stars" id="rateRow" style="margin-top:6px"></div>
+        </div>
+        <div id="viz"></div>
+        <div class="prow">
+          <select id="speedSel">
+            <option value="0.75">0.75x</option><option value="1" selected>1.0x</option>
+            <option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2.0x</option>
+          </select>
+          <button class="btn" id="offlineBtn" data-i18n="btn_offline">В ОФЛАЙН</button>
+        </div>
+        <div>
+          <div class="cap" style="margin-bottom:8px" data-i18n="lbl_next">ДАЛЕЕ В ОЧЕРЕДИ</div>
+          <div id="queueList"></div>
+        </div>
+        <div class="ytid-row">
+          <input id="ytIdInput" type="text" data-i18n-ph="ytid_ph" placeholder="YouTube ID или ссылка на трек…">
+          <button id="ytIdApply" data-i18n="ytid_ok">OK</button>
+        </div>
+        <div id="engineBadge"><i></i><span>—</span></div>
+      </div>
+
+      <!-- LYRICS -->
+      <div class="ptbody" data-body="lyrics">
+        <div class="lyr-tools">
+          <span class="src" id="lyrSrc">LRCLIB</span>
+          <button id="lyrOffMinus">−0.5s</button>
+          <span class="off" id="lyrOffVal">0.0s</span>
+          <button id="lyrOffPlus">+0.5s</button>
+          <button id="lyrEdit" data-i18n="lyr_edit">Вставить LRC</button>
+        </div>
+        <div class="lyrbox" id="lyricsBox"><ol></ol></div>
+        <div id="lyrEditor">
+          <textarea id="lyrTa" spellcheck="false" placeholder="[00:12.34] строка текста…"></textarea>
+          <div class="lyr-hint" data-i18n="lyr_hint">Поддерживается LRC с таймкодами [мм:сс.хх] или простой текст построчно. Сохранённый текст хранится локально и имеет приоритет.</div>
+          <div class="prow">
+            <button class="btn" id="lyrSave" data-i18n="lyr_save">Сохранить</button>
+            <button class="btn" id="lyrReset" data-i18n="lyr_reset">Сбросить к LRCLIB</button>
+            <button class="btn" id="lyrCancel" data-i18n="lyr_cancel">Отмена</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EQ -->
+      <div class="ptbody" data-body="eq">
+        <div class="prow">
+          <select id="eqPreset" style="flex:1"></select>
+          <button class="btn" id="eqReset" data-i18n="eq_reset">Сброс</button>
+        </div>
+        <div id="eqBands"></div>
+        <div id="eqNote" data-i18n="eq_note">Реальные BiquadFilterNode (Web Audio API): эквалайзер обрабатывает загруженные локальные файлы. Для YouTube-потока браузер не даёт доступ к аудиодорожке — ползунки сохраняются и применяются к файлам.</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottombar panel">
+    <div class="bb-l">
+      <img id="bbCover" alt="">
+      <div class="t"><b id="bbTitle" data-i18n="np_empty">Трек не выбран</b><span id="bbArtist">VibeStream</span></div>
+      <button class="heart" id="bbHeart" style="width:30px;height:30px;font-size:13px">♥</button>
+    </div>
+    <div class="bb-c">
+      <div class="transport">
+        <button id="btnShuffle" title="Shuffle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg></button>
+        <button id="btnPrev" title="Prev"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM18 6l-8.5 6L18 18z"/></svg></button>
+        <button id="btnPlay" title="Play/Pause">
+          <svg id="icPlay" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icPause" width="19" height="19" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <button id="btnNext" title="Next"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+        <button id="btnLoop" class="off">LOOP</button>
+      </div>
+      <div class="tl">
+        <span id="tlCur">0:00</span>
+        <input type="range" class="hr" id="tlRange" min="0" max="1000" value="0" step="1">
+        <span id="tlTot">0:00</span>
+      </div>
+    </div>
+    <div class="bb-r">
+      <button id="btnWidget" title="Mini widget"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor" stroke="none"/></svg></button>
+      <button id="btnFile" title="Load local file"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></button>
+      <button id="btnMute" title="Mute"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="volWave" d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <input type="range" class="hr" id="volRange" min="0" max="100" value="80">
+    </div>
+  </div>
+</section>
+
+<!-- LYRICS LANDING BLOCK -->
+<section id="lyrics" class="wrap reveal">
+  <div class="sec-h">
+    <h2 data-i18n="lyr_h">Тёмный Принц — Овердоз</h2>
+    <p data-i18n="lyr_sub">Оригинальный текст с таймкодами: подсветка и автопрокрутка идут синхронно с воспроизведением, клик по строке — перемотка.</p>
+  </div>
+  <div class="panel" id="lyrBigWrap">
+    <div class="lyr-tools" style="margin-bottom:12px">
+      <span class="src" id="lyrBigSrc">LRCLIB</span>
+      <span class="lyr-hint" id="lyrBigNote"></span>
+    </div>
+    <div class="lyrbox" id="lyrBig"><ol></ol></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="feat" class="wrap">
+  <div class="sec-h reveal"><h2 data-i18n="feat_h">Почему VibeStream</h2><p data-i18n="feat_sub">Всё, что видно в превью выше, работает и в десктоп-приложении.</p></div>
+  <div id="featGrid">
+    <div class="fcard tilt reveal"><div class="fi">⃠</div><h3 data-i18n="f1t">Ноль рекламы</h3><p data-i18n="f1d">Никаких вставок и баннеров: ни в каталоге, ни между треками, ни в офлайн-режиме.</p></div>
+    <div class="fcard tilt reveal"><div class="fi">▮</div><h3 data-i18n="f2t">10-полосный эквалайзер</h3><p data-i18n="f2d">Настоящие BiquadFilterNode: 32 Гц – 16 кГц, пресеты и ручной режим для локальных файлов.</p></div>
+    <div class="fcard tilt reveal"><div class="fi">✎</div><h3 data-i18n="f3t">Синхронный текст</h3><p data-i18n="f3d">Построчная подсветка и автопрокрутка по таймкодам, клик по строке перематывает трек.</p></div>
+    <div class="fcard tilt reveal"><div class="fi">⤓</div><h3 data-i18n="f4t">Офлайн-кэш</h3><p data-i18n="f4d">Тексты, метаданные и оценки хранятся локально; свои файлы играют без сети.</p></div>
+    <div class="fcard tilt reveal"><div class="fi">◎</div><h3 data-i18n="f5t">Локальные файлы</h3><p data-i18n="f5d">MP3 / OGG / WAV прямо с диска через Web Audio API — с полным эквалайзером и анализатором.</p></div>
+    <div class="fcard tilt reveal"><div class="fi">◱</div><h3 data-i18n="f6t">Мини-виджет</h3><p data-i18n="f6d">Компактный плеер в углу поверх окон: play/pause и следующий трек в один клик.</p></div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="shots" class="wrap">
+  <div class="sec-h reveal"><h2 data-i18n="shots_h">Скриншоты приложения</h2><p data-i18n="shots_sub">Клик — полноэкранный просмотр. Положите файлы в screens/, чтобы подставить оригинальные кадры.</p></div>
+  <div class="shots-grid" id="shotsGrid"></div>
+</section>
+
+<!-- DOWNLOAD -->
+<section id="download" class="wrap">
+  <div class="sec-h reveal"><h2 data-i18n="dl_h">Скачать релиз</h2><p data-i18n="dl_sub">Актуальная сборка подтягивается из GitHub Releases репозитория vibestream-release.</p></div>
+  <div class="panel reveal" id="relCard">
+    <div class="ri">⤓</div>
+    <div class="rt"><b id="relTitle">…</b><p id="relMeta"></p></div>
+    <div id="relAssets"></div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div>VibeStream • <span data-i18n="foot1">неофициальное превью-приложение</span> • <span data-i18n="foot2">текст песни загружается из LRCLIB и принадлежит правообладателям</span></div>
+  <div>© 2026 • <a href="https://github.com/maxpapin2015/vibestream-release" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:none">github.com/maxpapin2015/vibestream-release</a></div>
+</footer>
+
+<!-- modals / widget / toast / hidden inputs -->
+<div class="modal" id="shotModal"><img id="shotModalImg" alt=""></div>
+<div class="modal" id="statsModal"><div class="mbox"><h3 data-i18n="stats_h">История и статистика</h3><div id="statsBody"></div></div></div>
+<div id="miniWidget">
+  <img id="mwCover" alt="">
+  <div class="mt" id="mwTitle">VibeStream</div>
+  <button id="mwPlay">▶</button><button id="mwNext">⏭</button><button id="mwClose">✕</button>
+</div>
+<div id="toast"></div>
+<input type="file" id="fileInput" accept="audio/*,.mp3,.ogg,.wav" style="display:none">
+
+<script>
+"use strict";
+/* ═══════════ CONFIG ═══════════ */
+const DEFAULT_YT_ID = "";               // ← вставьте точный videoId, если известен
+const YT_SEARCH_Q   = "темный принц - овердоз";
+const REPO = "maxpapin2015/vibestream-release";
+const LRC_ARTIST = "тёмный принц", LRC_TRACK = "овердоз";
+
+/* ═══════════ HELPERS ═══════════ */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
+             set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
+const fmt = s => { s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+const enc = encodeURIComponent;
+let toastT=null;
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2800); }
+
+/* ═══════════ I18N ═══════════ */
+const D = {
+ ru:{ noads:"БЕЗ РЕКЛАМЫ", nav_overview:"Обзор", nav_player:"Плеер", nav_lyrics:"Текст", nav_shots:"Скриншоты", nav_download:"Скачать",
+  hero_h:"Музыка без рекламы.<br>Звук <em>твоего</em> вайба.", hero_sub:"VibeStream — стриминговый плеер с 10-полосным эквалайзером, синхронным текстом, офлайн-кэшем и локальными файлами. Ниже — живое превью: прямо сейчас играет «Тёмный Принц — Овердоз».",
+  hero_cta1:"Слушать «Овердоз»", hero_cta2:"Скачать релиз", hero_s1:"треков в каталоге", hero_s2:"полос эквалайзера", hero_s3:"рекламы навсегда",
+  side_home:"Главная и чарты", side_search:"Поиск по каталогу", side_fav:"Любимые треки", side_rated:"Оценённые (1–5★)", side_offline:"Офлайн-кэш", side_local:"Локальные файлы", side_history:"История и статистика", side_pls:"ПЛЕЙЛИСТЫ", side_widget:"Мини-виджет в углу", side_acc:"АКЦЕНТ",
+  acc1:"Изумрудный (Spotify)", acc2:"Лайм", acc3:"Циан", acc4:"Фиолет", acc5:"Оранж",
+  search_ph:"Поиск исполнителей, треков, жанров и настроения...", btn_find:"НАЙТИ", btn_sleep:"ТАЙМЕР СНА",
+  chip_all:"Все чарты", chip_el:"Электроника", chip_hh:"Хип-хоп", chip_rock:"Рок", chip_pop:"Поп", chip_amb:"Эмбиент / Чилл", chip_ru:"Русские хиты", chip_ph:"Фонк / Дрифт",
+  trend_k:"СТРИМИНГОВЫЙ КАТАЛОГ", trend_t:"В тренде сейчас", trend_b:"СЛУШАТЬ ВСЁ",
+  th_track:"ТРЕК", th_artist:"ИСПОЛНИТЕЛЬ", th_rate:"ОЦЕНКА", th_src:"ИСТОЧНИК", th_time:"ВРЕМЯ", th_act:"ДЕЙСТВИЯ",
+  tab_now:"Сейчас", tab_lyrics:"Текст", tab_eq:"Эквалайзер",
+  np_empty:"Трек не выбран", np_hint:"Дважды нажмите на трек для запуска", lbl_rate:"ОЦЕНКА", lbl_next:"ДАЛЕЕ В ОЧЕРЕДИ",
+  btn_offline:"В ОФЛАЙН", show_yt:"Показать YouTube-плеер", ytid_ph:"YouTube ID или ссылка на трек…", ytid_ok:"OK",
+  lyr_edit:"Вставить LRC", lyr_hint:"Поддерживается LRC с таймкодами [мм:сс.хх] или простой текст построчно. Сохранённый текст хранится локально и имеет приоритет.",
+  lyr_save:"Сохранить", lyr_reset:"Сбросить к LRCLIB", lyr_cancel:"Отмена",
+  eq_reset:"Сброс", eq_note:"Реальные BiquadFilterNode (Web Audio API): эквалайзер обрабатывает загруженные локальные файлы. Для YouTube-потока браузер не даёт доступ к аудиодорожке — ползунки сохраняются и применяются к файлам.",
+  lyr_h:"Тёмный Принц — Овердоз", lyr_sub:"Оригинальный текст с таймкодами: подсветка и автопрокрутка идут синхронно с воспроизведением, клик по строке — перемотка.",
+  feat_h:"Почему VibeStream", feat_sub:"Всё, что видно в превью выше, работает и в десктоп-приложении.",
+  f1t:"Ноль рекламы", f1d:"Никаких вставок и баннеров: ни в каталоге, ни между треками, ни в офлайн-режиме.",
+  f2t:"10-полосный эквалайзер", f2d:"Настоящие BiquadFilterNode: 32 Гц – 16 кГц, пресеты и ручной режим для локальных файлов.",
+  f3t:"Синхронный текст", f3d:"Построчная подсветка и автопрокрутка по таймкодам, клик по строке перематывает трек.",
+  f4t:"Офлайн-кэш", f4d:"Тексты, метаданные и оценки хранятся локально; свои файлы играют без сети.",
+  f5t:"Локальные файлы", f5d:"MP3 / OGG / WAV прямо с диска через Web Audio API — с полным эквалайзером и анализатором.",
+  f6t:"Мини-виджет", f6d:"Компактный плеер в углу поверх окон: play/pause и следующий трек в один клик.",
+  shots_h:"Скриншоты приложения", shots_sub:"Клик — полноэкранный просмотр. Положите файлы в screens/, чтобы подставить оригинальные кадры.",
+  sh1:"Эквалайзер: 10 полос и пресеты", sh2:"Синхронный текст с подсветкой", sh3:"Сейчас играет: очередь и оценка", sh4:"Главный экран каталога",
+  dl_h:"Скачать релиз", dl_sub:"Актуальная сборка подтягивается из GitHub Releases репозитория vibestream-release.",
+  foot1:"неофициальное превью-приложение", foot2:"текст песни загружается из LRCLIB и принадлежит правообладателям",
+  stats_h:"История и статистика",
+  src_yt:"Источник: YouTube IFrame API", src_file:"Источник: локальный файл (Web Audio EQ)", src_blocked:"YouTube API недоступен",
+  st_loading:"YouTube API: загрузка…", st_blocked:"YouTube IFrame API заблокирован (сеть / расширение / регион). Резервные варианты:",
+  st_open_yt:"Открыть на YouTube", st_load_file:"Загрузить свой файл", st_embed:"Встраивание этого видео запрещено правообладателем. Вставьте другой ID или загрузите файл.",
+  st_badid:"Некорректный YouTube ID.", playing_now:"ИГРАЕТ", queue_empty:"Очередь пуста",
+  t_offline_ok:"Трек добавлен в офлайн-кэш (текст и метаданные).", t_offline_file:"Локальный файл уже доступен офлайн.",
+  t_fav_add:"В любимых ♥", t_fav_rm:"Убрано из любимых", t_rate:"Оценка: ", t_queue_add:"Добавлено в очередь",
+  t_pls_new:"Плейлист создан: ", t_pls_saved:"Очередь сохранена в плейлист", t_pls_load:"Плейлист загружен в очередь",
+  t_sleep:"Таймер сна: ", t_sleep_off:"выкл", t_min:" мин", t_found:"Найдено треков: ", t_hist:"Прослушиваний: ",
+  t_lyr_ok:"Текст применён", t_lyr_load:"Текст: загружен из LRCLIB", t_lyr_cache:"Текст: из локального кэша", t_lyr_manual:"Текст: ваш LRC", t_lyr_none:"Текст не найден: вставьте LRC вручную",
+  t_yt_applied:"YouTube ID применён", t_file:"Локальный файл: ", t_eq:"Пресет: ", t_speed:"Скорость: ",
+  dl_loading:"Запрашиваем GitHub Releases…", dl_fail:"API релизов недоступен — откройте страницу релизов:", dl_page:"Страница релизов", dl_src:"Исходники (ZIP)", dl_assets:"Скачать ассет:" },
+ en:{ noads:"NO ADS", nav_overview:"Overview", nav_player:"Player", nav_lyrics:"Lyrics", nav_shots:"Screenshots", nav_download:"Download",
+  hero_h:"Music with zero ads.<br>Sound of <em>your</em> vibe.", hero_sub:"VibeStream is a streaming player with a 10-band equalizer, synced lyrics, offline cache and local files. Below is a live preview: “Dark Prince — Overdose” plays right here.",
+  hero_cta1:"Play “Overdose”", hero_cta2:"Download release", hero_s1:"tracks in catalog", hero_s2:"EQ bands", hero_s3:"ads forever",
+  side_home:"Home & charts", side_search:"Catalog search", side_fav:"Liked tracks", side_rated:"Rated (1–5★)", side_offline:"Offline cache", side_local:"Local files", side_history:"History & stats", side_pls:"PLAYLISTS", side_widget:"Corner mini-widget", side_acc:"ACCENT",
+  acc1:"Emerald (Spotify)", acc2:"Lime", acc3:"Cyan", acc4:"Violet", acc5:"Orange",
+  search_ph:"Search artists, tracks, genres and moods...", btn_find:"FIND", btn_sleep:"SLEEP TIMER",
+  chip_all:"All charts", chip_el:"Electronic", chip_hh:"Hip-hop", chip_rock:"Rock", chip_pop:"Pop", chip_amb:"Ambient / Chill", chip_ru:"Russian hits", chip_ph:"Phonk / Drift",
+  trend_k:"STREAMING CATALOG", trend_t:"Trending now", trend_b:"PLAY ALL",
+  th_track:"TRACK", th_artist:"ARTIST", th_rate:"RATING", th_src:"SOURCE", th_time:"TIME", th_act:"ACTIONS",
+  tab_now:"Now", tab_lyrics:"Lyrics", tab_eq:"Equalizer",
+  np_empty:"No track selected", np_hint:"Double-click a track to start", lbl_rate:"RATING", lbl_next:"NEXT IN QUEUE",
+  btn_offline:"GO OFFLINE", show_yt:"Show YouTube player", ytid_ph:"YouTube ID or track URL…", ytid_ok:"OK",
+  lyr_edit:"Paste LRC", lyr_hint:"LRC with [mm:ss.xx] timestamps or plain line-by-line text is supported. Saved lyrics are stored locally and take priority.",
+  lyr_save:"Save", lyr_reset:"Reset to LRCLIB", lyr_cancel:"Cancel",
+  eq_reset:"Reset", eq_note:"Real BiquadFilterNode (Web Audio API): the EQ processes uploaded local files. Browser blocks access to the YouTube audio stream — slider values are saved and applied to files.",
+  lyr_h:"Dark Prince — Overdose", lyr_sub:"Original lyrics with timestamps: highlighting and autoscroll follow playback, clicking a line seeks the track.",
+  feat_h:"Why VibeStream", feat_sub:"Everything you see in the preview above works in the desktop app too.",
+  f1t:"Zero ads", f1d:"No inserts or banners: not in the catalog, not between tracks, not offline.",
+  f2t:"10-band equalizer", f2d:"Real BiquadFilterNode: 32 Hz – 16 kHz, presets and manual mode for local files.",
+  f3t:"Synced lyrics", f3d:"Line-by-line highlight and autoscroll by timestamps; clicking a line seeks the track.",
+  f4t:"Offline cache", f4d:"Lyrics, metadata and ratings are stored locally; your own files play with no network.",
+  f5t:"Local files", f5d:"MP3 / OGG / WAV straight from disk via Web Audio API — full EQ and analyser included.",
+  f6t:"Mini widget", f6d:"A compact player in the corner above all windows: play/pause and next in one click.",
+  shots_h:"App screenshots", shots_sub:"Click for fullscreen. Drop files into screens/ to use the original captures.",
+  sh1:"Equalizer: 10 bands & presets", sh2:"Synced lyrics with highlight", sh3:"Now playing: queue & rating", sh4:"Catalog main screen",
+  dl_h:"Download release", dl_sub:"The latest build is pulled from GitHub Releases of the vibestream-release repo.",
+  foot1:"unofficial preview app", foot2:"song lyrics are loaded from LRCLIB and belong to their rights holders",
+  stats_h:"History & stats",
+  src_yt:"Source: YouTube IFrame API", src_file:"Source: local file (Web Audio EQ)", src_blocked:"YouTube API unavailable",
+  st_loading:"YouTube API: loading…", st_blocked:"YouTube IFrame API is blocked (network / extension / region). Fallbacks:",
+  st_open_yt:"Open on YouTube", st_load_file:"Load your file", st_embed:"Embedding this video is disabled by the rights holder. Paste another ID or load a file.",
+  st_badid:"Invalid YouTube ID.", playing_now:"PLAYING", queue_empty:"Queue is empty",
+  t_offline_ok:"Track cached offline (lyrics & metadata).", t_offline_file:"Local file is already offline.",
+  t_fav_add:"Liked ♥", t_fav_rm:"Removed from likes", t_rate:"Rating: ", t_queue_add:"Added to queue",
+  t_pls_new:"Playlist created: ", t_pls_saved:"Queue saved to playlist", t_pls_load:"Playlist loaded into queue",
+  t_sleep:"Sleep timer: ", t_sleep_off:"off", t_min:" min", t_found:"Tracks found: ", t_hist:"Plays: ",
+  t_lyr_ok:"Lyrics applied", t_lyr_load:"Lyrics: loaded from LRCLIB", t_lyr_cache:"Lyrics: local cache", t_lyr_manual:"Lyrics: your LRC", t_lyr_none:"Lyrics not found: paste LRC manually",
+  t_yt_applied:"YouTube ID applied", t_file:"Local file: ", t_eq:"Preset: ", t_speed:"Speed: ",
+  dl_loading:"Querying GitHub Releases…", dl_fail:"Releases API unavailable — open the releases page:", dl_page:"Releases page", dl_src:"Source (ZIP)", dl_assets:"Download asset:" }
+};
+let lang = LS.get("vs_lang","ru");
+const t = k => (D[lang] && D[lang][k]) || D.ru[k] || k;
+function applyLang(){
+  document.documentElement.lang = lang;
+  $("#langRu").classList.toggle("on", lang==="ru");
+  $("#langEn").classList.toggle("on", lang==="en");
+  $$("[data-i18n]").forEach(el=>{ const v=t(el.dataset.i18n); if(el.tagName==="INPUT"){} else el.innerHTML=v; });
+  $$("[data-i18n-ph]").forEach(el=> el.placeholder = t(el.dataset.i18nPh));
+  buildEqPresetOptions(); renderChart(); renderQueue(); renderEngineBadge(); renderSleep();
+  $("#stTracks").textContent = TRACKS.length;
+}
+
+/* ═══════════ CATALOG ═══════════ */
+const TRACKS = [
+ {t:"Овердоз", a:"Тёмный Принц", g:"ru", d:"1:29", q:YT_SEARCH_Q, ytId:DEFAULT_YT_ID||null, feat:true},
+ {t:"AC Slater - Jack Got Jacked (Jack Beats Remix)", a:"Raar", g:"electronic", d:"2:53", q:"AC Slater Jack Got Jacked Jack Beats Remix"},
+ {t:"Sweater Weather (ZEVY Remix)", a:"ZEVY", g:"pop", d:"2:51", q:"Sweater Weather ZEVY Remix"},
+ {t:"SKRILLEX - SUPERSONIC (My Existence)", a:"ALBNOPNDA", g:"electronic", d:"1:58", q:"Skrillex Supersonic My Existence"},
+ {t:"Dee Mad - Air", a:"Dabow", g:"hiphop", d:"2:05", q:"Dee Mad Air Dabow"},
+ {t:"Nicole Kidman", a:"PATAYA", g:"electronic", d:"3:02", q:"PATAYA Nicole Kidman"},
+ {t:"Name That Tune", a:"Harvey Twyman", g:"pop", d:"2:09", q:"Harvey Twyman Name That Tune"},
+ {t:"% Daily Value", a:"DARK VELVET", g:"rock", d:"7:00", q:"DARK VELVET % Daily Value"},
+ {t:"Andru Ballota L", a:"AndruBallota", g:"ambient", d:"8:42", q:"AndruBallota ambient mix"},
+ {t:"GREWISHKA", a:"DUBDRONOMER", g:"phonk", d:"2:44", q:"DUBDRONOMER GREWISHKA"}
+];
+function coverSVG(tr,i){
+  const h=(i*47+140)%360, ini=(tr.a[0]||"V").toUpperCase();
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(${h},45%,22%)'/><stop offset='1' stop-color='hsl(${(h+60)%360},55%,10%)'/></linearGradient></defs><rect width='96' height='96' rx='14' fill='url(#g)'/><circle cx='48' cy='48' r='26' fill='none' stroke='hsl(${h},70%,55%)' stroke-opacity='.55' stroke-width='3'/><text x='48' y='58' font-family='Arial' font-size='30' font-weight='bold' fill='hsl(${h},80%,70%)' text-anchor='middle'>${ini}</text></svg>`;
+  return "data:image/svg+xml;utf8,"+enc(svg);
+}
+
+/* ═══════════ STATE ═══════════ */
+let cur=-1, queueArr=null, loopMode=0, shuffle=false, sleepMin=0, sleepTimer=null;
+let favs=new Set(LS.get("vs_favs",[])), ratings=LS.get("vs_rates",{}), offlineSet=new Set(LS.get("vs_off",[]));
+let history=LS.get("vs_hist",[]), playlists=LS.get("vs_pls",[]);
+const filter={g:"all", q:"", mode:"all"};
+
+/* ═══════════ ENGINE ═══════════ */
+const FREQS=[32,64,125,250,500,1000,2000,4000,8000,16000];
+let eqVals=LS.get("vs_eq", FREQS.map(()=>0));
+const engine={
+  kind:"yt", yt:null, ytReady:false, ytState:-1, ytBlocked:false, pending:null,
+  audio:new Audio(), ctx:null, analyser:null, filters:[], master:null, graphed:false,
+  playing(){ return this.kind==="yt" ? this.ytState===1 : (!this.audio.paused && !this.audio.ended && !!this.audio.src); },
+  time(){ if(this.kind==="yt") return (this.ytReady&&this.yt&&this.yt.getCurrentTime)?(this.yt.getCurrentTime()||0):0; return this.audio.currentTime||0; },
+  dur(){ if(this.kind==="yt") return (this.ytReady&&this.yt&&this.yt.getDuration)?(this.yt.getDuration()||0):0; return isFinite(this.audio.duration)?this.audio.duration:0; },
+  play(){ if(this.kind==="yt"){ if(this.ytReady&&this.yt) this.yt.playVideo(); } else { if(this.ctx&&this.ctx.state==="suspended") this.ctx.resume(); this.audio.play().catch(()=>{}); } },
+  pause(){ if(this.kind==="yt"){ if(this.ytReady&&this.yt) this.yt.pauseVideo(); } else this.audio.pause(); },
+  seek(s){ if(this.kind==="yt"){ if(this.ytReady&&this.yt) this.yt.seekTo(s,true); } else { try{this.audio.currentTime=s;}catch(e){} } },
+  setVol(v){ if(this.ytReady&&this.yt) this.yt.setVolume(v); this.audio.volume=v/100; },
+  setRate(r){ if(this.ytReady&&this.yt){ try{this.yt.setPlaybackRate(r);}catch(e){} } this.audio.playbackRate=r; }
+};
+function loadYTAPI(){
+  const s=document.createElement("script"); s.src="https://www.youtube.com/iframe_api";
+  s.onerror=()=>ytBlocked(); document.head.appendChild(s);
+  setTimeout(()=>{ if(!window.YT||!window.YT.Player) ytBlocked(); }, 9000);
+}
+window.onYouTubeIframeAPIReady=function(){
+  engine.yt=new YT.Player("ytHost",{ playerVars:{controls:0,playsinline:1,rel:0,modestbranding:1,autoplay:0,disablekb:1},
+    events:{ onReady:()=>{ engine.ytReady=true; engine.setVol(+$("#volRange").value); engine.setRate(parseFloat($("#speedSel").value)); renderEngineBadge(); hideBan(); if(engine.pending!=null){ const p=engine.pending; engine.pending=null; playTrack(p); } },
+             onStateChange:e=>{ engine.ytState=e.data; if(e.data===YT.PlayerState.ENDED) handleEnd(); },
+             onError:e=>{ const c=e.data; if(c===101||c===150) showBan(t("st_embed")); else if(c===2) showBan(t("st_badid")); else if(c===100) showBan(t("st_embed")); } } });
+};
+function ytBlocked(){ if(engine.ytBlocked) return; engine.ytBlocked=true; renderEngineBadge();
+  showBan(t("st_blocked")+`<div class="row"><button onclick="openOnYouTube()">`+t("st_open_yt")+`</button><button onclick="document.getElementById('fileInput').click()">`+t("st_load_file")+`</button></div>`); }
+function showBan(html){ const b=$("#statusBan"); b.innerHTML=html; b.classList.add("show"); }
+function hideBan(){ $("#statusBan").classList.remove("show"); }
+window.openOnYouTube=function(){ const tr=cur>=0?TRACKS[cur]:TRACKS[0];
+  window.open(tr.ytId?`https://www.youtube.com/watch?v=${tr.ytId}`:`https://www.youtube.com/results?search_query=${enc(tr.q)}`,"_blank"); };
+
+/* local file graph */
+function ensureGraph(){
+  if(engine.graphed) { if(engine.ctx&&engine.ctx.state==="suspended") engine.ctx.resume(); return; }
+  const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  engine.ctx=new AC();
+  const src=engine.ctx.createMediaElementSource(engine.audio);
+  engine.filters=FREQS.map((f,i)=>{ const b=engine.ctx.createBiquadFilter();
+    b.type = i===0?"lowshelf" : i===FREQS.length-1?"highshelf" : "peaking";
+    b.frequency.value=f; b.Q.value=1; b.gain.value=eqVals[i]||0; return b; });
+  engine.analyser=engine.ctx.createAnalyser(); engine.analyser.fftSize=128; engine.analyser.smoothingTimeConstant=.78;
+  engine.master=engine.ctx.createGain();
+  let node=src; engine.filters.forEach(f=>{ node.connect(f); node=f; });
+  node.connect(engine.analyser); engine.analyser.connect(engine.master); engine.master.connect(engine.ctx.destination);
+  engine.graphed=true;
+}
+function playFile(file){
+  ensureGraph();
+  engine.audio.src=URL.createObjectURL(file); engine.kind="file";
+  cur=-1; updateNowUI(file.name.replace(/\.[^.]+$/,""), file.name, null);
+  engine.audio.play().catch(()=>{});
+  toast(t("t_file")+file.name); renderEngineBadge(); pushHistoryRaw(file.name);
+}
+engine.audio.addEventListener("ended", handleEnd);
+
+/* ═══════════ PLAYBACK CONTROL ═══════════ */
+function playTrack(i){
+  if(i<0||i>=TRACKS.length) return;
+  cur=i; const tr=TRACKS[i];
+  if(engine.kind!=="yt"){ engine.kind="yt"; engine.audio.pause(); }
+  updateNowUI(tr.t, tr.a, tr); pushHistory(tr);
+  if(engine.ytBlocked||!window.YT){ ytBlocked(); return; }
+  if(!engine.ytReady){ engine.pending=i; showBan(t("st_loading")); return; }
+  hideBan();
+  try{
+    if(tr.ytId){ engine.yt.cueVideoById(tr.ytId); engine.yt.playVideo(); }
+    else engine.yt.loadPlaylist({listType:"search", list:tr.q});
+  }catch(e){ ytBlocked(); }
+}
+function togglePlay(){
+  if(cur<0 && engine.kind==="yt"){ playTrack(visibleIdx()[0]||0); return; }
+  if(engine.kind==="file" && !engine.audio.src){ $("#fileInput").click(); return; }
+  engine.playing()?engine.pause():engine.play();
+}
+function nextTrack(auto){
+  const seq = queueArr || TRACKS.map((_,i)=>i);
+  let pos = seq.indexOf(cur);
+  if(shuffle){ let n; do{ n=Math.floor(Math.random()*TRACKS.length);}while(n===cur&&TRACKS.length>1); playTrack(n); return; }
+  pos = pos<0?0:pos+1;
+  if(pos>=seq.length){ if(loopMode===2){ playTrack(seq[0]); } else if(auto){ engine.pause(); engine.seek(0); } else playTrack(seq[0]); return; }
+  playTrack(seq[pos]);
+}
+function prevTrack(){ if(engine.time()>3){ engine.seek(0); return; }
+  const seq=queueArr||TRACKS.map((_,i)=>i); let pos=seq.indexOf(cur); pos=pos<=0?seq.length-1:pos-1; playTrack(seq[pos]); }
+function handleEnd(){ if(loopMode===1){ engine.seek(0); engine.play(); } else nextTrack(true); }
+function seekTo(s){ engine.seek(s); }
+
+/* ═══════════ UI RENDER ═══════════ */
+function visibleIdx(){
+  return TRACKS.map((tr,i)=>i).filter(i=>{
+    const tr=TRACKS[i];
+    if(filter.g!=="all" && tr.g!==filter.g) return false;
+    if(filter.mode==="fav" && !favs.has(i)) return false;
+    if(filter.mode==="rated" && !ratings[i]) return false;
+    if(filter.mode==="offline" && !offlineSet.has(i)) return false;
+    if(filter.q){ const q=filter.q.toLowerCase(); if(!(tr.t+" "+tr.a).toLowerCase().includes(q)) return false; }
+    return true; });
+}
+function starsHTML(val,i){ let h=""; for(let s=1;s<=5;s++) h+=`<button data-s="${s}" data-i="${i}" class="${s<=val?"on":""}">★</button>`; return h; }
+function renderChart(){
+  const idx=visibleIdx();
+  $("#trendNote").textContent=(lang==="ru"?"Доступно треков: ":"Tracks available: ")+idx.length+" • "+(lang==="ru"?"Бесплатно и без рекламы":"Free & ad-free");
+  $("#chartRows").innerHTML = idx.map((i,k)=>{ const tr=TRACKS[i];
+    return `<div class="crow tr ${i===cur&&engine.playing()?"playing":""}" data-i="${i}" title="${tr.t}">
+      <div class="n">${i===cur&&engine.playing()?`<span class="eq-anim"><i></i><i></i><i></i></span>`:(k+1)}</div>
+      <img class="cv" src="${coverSVG(tr,i)}" alt="">
+      <div class="tt">${tr.t}</div>
+      <div class="aa c-aa">${tr.a}</div>
+      <div class="stars">${starsHTML(ratings[i]||0,i)}</div>
+      <div class="src c-src">${tr.feat?"YouTube API":"YT Search"}</div>
+      <div class="du c-src">${tr.d}</div>
+      <div class="acts c-act">
+        <button data-act="fav" data-i="${i}" class="${favs.has(i)?"on":""}" title="♥">♥</button>
+        <button data-act="q" data-i="${i}" title="+">+</button>
+        <button data-act="off" data-i="${i}" class="${offlineSet.has(i)?"on":""}" title="⤓">⤓</button>
+      </div></div>`; }).join("") || `<div style="padding:26px;text-align:center;color:var(--mut2);font-size:13px">∅</div>`;
+}
+function renderQueue(){
+  const seq=queueArr||TRACKS.map((_,i)=>i);
+  let pos=seq.indexOf(cur); const items=[];
+  if(cur>=0) items.push({i:cur,now:true});
+  for(let k=pos+1;k<seq.length&&items.length<4;k++) items.push({i:seq[k]});
+  if(cur<0) for(let k=0;k<3;k++) items.push({i:seq[k]});
+  $("#queueList").innerHTML = items.map(it=>{ const tr=TRACKS[it.i];
+    return `<div class="qitem" data-i="${it.i}"><img src="${coverSVG(tr,it.i)}" alt="">
+      <div class="qt">${it.now?`<b>${t("playing_now")}</b>`:`<span>${String(seq.indexOf(it.i)+1).padStart(2,"0")}</span>`}${tr.t} — ${tr.a}</div></div>`; }).join("")
+    || `<div style="color:var(--mut2);font-size:12px;padding:6px">${t("queue_empty")}</div>`;
+}
+function updateNowUI(title,artist,tr){
+  $("#nowTitle").textContent=title||t("np_empty");
+  $("#nowArtist").textContent=artist||"VibeStream";
+  $("#bbTitle").textContent=title||t("np_empty");
+  $("#bbArtist").textContent=artist||"VibeStream";
+  $("#mwTitle").textContent=(title||"VibeStream");
+  const i = tr?TRACKS.indexOf(tr):-1;
+  const cv = tr?coverSVG(tr,i):coverSVG({t:"V",a:"V"},0);
+  $("#bbCover").src=cv; $("#mwCover").src=cv;
+  const th=$("#ytThumb");
+  if(tr&&tr.ytId){ th.src=`https://i.ytimg.com/vi/${tr.ytId}/hqdefault.jpg`; th.style.display=""; }
+  else { th.src=cv; th.style.display=""; }
+  const hf=favs.has(i), rt=ratings[i]||0;
+  $("#nowHeart").classList.toggle("on",hf); $("#bbHeart").classList.toggle("on",hf);
+  $("#rateRow").innerHTML=starsHTML(rt,i);
+  renderQueue(); renderChart();
+}
+function renderEngineBadge(){
+  const el=$("#engineBadge span");
+  el.textContent = engine.ytBlocked? t("src_blocked") : engine.kind==="file"? t("src_file") : t("src_yt");
+}
+function renderSleep(){ $("#sleepBtn").textContent = t("btn_sleep")+(sleepMin?` · ${sleepMin}${lang==="ru"?"м":"m"}`:""); }
+
+/* stars / actions delegation */
+document.addEventListener("click",e=>{
+  const st=e.target.closest(".stars button");
+  if(st){ const i=+st.dataset.i, s=+st.dataset.s; ratings[i]=(ratings[i]===s?0:s); LS.set("vs_rates",ratings);
+    toast(t("t_rate")+(ratings[i]||"—")); renderChart(); if(i===cur) updateNowUI(TRACKS[i].t,TRACKS[i].a,TRACKS[i]); return; }
+  const act=e.target.closest(".acts button");
+  if(act){ const i=+act.dataset.i;
+    if(act.dataset.act==="fav"){ favs.has(i)?favs.delete(i):favs.add(i); LS.set("vs_favs",[...favs]); toast(favs.has(i)?t("t_fav_add"):t("t_fav_rm")); renderChart(); if(i===cur) updateNowUI(TRACKS[i].t,TRACKS[i].a,TRACKS[i]); }
+    if(act.dataset.act==="q"){ const seq=queueArr||(queueArr=TRACKS.map((_,k)=>k)); if(!seq.includes(i)) seq.push(i); else { seq.splice(seq.indexOf(i),1); seq.push(i);} toast(t("t_queue_add")); renderQueue(); }
+    if(act.dataset.act==="off"){ offlineSet.has(i)?offlineSet.delete(i):offlineSet.add(i); LS.set("vs_off",[...offlineSet]); cacheLyricsNow(); toast(t("t_offline_ok")); renderChart(); }
+    return; }
+  const row=e.target.closest(".crow.tr");
+  if(row && !e.target.closest(".stars") && !e.target.closest(".acts")){ /* single click: preview select */ }
+});
+document.addEventListener("dblclick",e=>{ const row=e.target.closest(".crow.tr"); if(row) playTrack(+row.dataset.i); });
+$("#chartRows").addEventListener("dblclick",e=>{}); // handled above
+$("#queueList").addEventListener("click",e=>{ const q=e.target.closest(".qitem"); if(q) playTrack(+q.dataset.i); });
+
+/* ═══════════ TRANSPORT / BOTTOM BAR ═══════════ */
+$("#btnPlay").onclick=togglePlay;
+$("#btnNext").onclick=()=>nextTrack(false);
+$("#btnPrev").onclick=prevTrack;
+$("#btnShuffle").onclick=e=>{ shuffle=!shuffle; e.currentTarget.classList.toggle("on",shuffle); };
+$("#btnLoop").onclick=e=>{ loopMode=(loopMode+1)%3; const b=e.currentTarget;
+  b.classList.toggle("off",loopMode===0); b.textContent= loopMode===0?"LOOP": loopMode===1?"1x LOOP":"QUEUE"; };
+$("#btnMute").onclick=()=>{ const v=$("#volRange"); if(+v.value>0){ v.dataset.prev=v.value; v.value=0; } else v.value=v.dataset.prev||80; v.dispatchEvent(new Event("input")); };
+$("#volRange").addEventListener("input",e=>{ const v=+e.target.value; engine.setVol(v); setRangeFill(e.target,v); LS.set("vs_vol",v); });
+$("#speedSel").addEventListener("change",e=>{ engine.setRate(parseFloat(e.target.value)); toast(t("t_speed")+e.target.value+"x"); });
+let tlDrag=false;
+$("#tlRange").addEventListener("pointerdown",()=>tlDrag=true);
+window.addEventListener("pointerup",()=>tlDrag=false);
+$("#tlRange").addEventListener("input",e=>{ const d=engine.dur(); if(d>0) seekTo((+e.target.value/1000)*d); });
+function setRangeFill(el,p){ el.style.setProperty("--p",p+"%"); }
+$("#btnFile").onclick=()=>$("#fileInput").click();
+$("#fileInput").addEventListener("change",e=>{ const f=e.target.files[0]; if(f) playFile(f); e.target.value=""; });
+$("#offlineBtn").onclick=()=>{ if(cur<0){ $("#fileInput").click(); return; }
+  offlineSet.add(cur); LS.set("vs_off",[...offlineSet]); cacheLyricsNow();
+  toast(engine.kind==="file"?t("t_offline_file"):t("t_offline_ok")); renderChart(); };
+$("#nowHeart").onclick=$("#bbHeart").onclick=()=>{ if(cur<0) return; favs.has(cur)?favs.delete(cur):favs.add(cur); LS.set("vs_favs",[...favs]);
+  toast(favs.has(cur)?t("t_fav_add"):t("t_fav_rm")); updateNowUI(TRACKS[cur].t,TRACKS[cur].a,TRACKS[cur]); };
+$("#revealYt").onclick=()=>$("#coverBox").classList.add("reveal");
+$("#ytIdApply").onclick=()=>{ const v=$("#ytIdInput").value.trim();
+  const m=v.match(/(?:v=|youtu\.be\/|\/shorts\/)([\w-]{11})/)||(/^[\w-]{11}$/.test(v)?[null,v]:null);
+  if(!m){ toast(t("st_badid")); return; }
+  if(cur<0) cur=0; TRACKS[cur].ytId=m[1]; engine.kind="yt";
+  if(engine.ytReady){ engine.yt.cueVideoById(m[1]); engine.yt.playVideo(); } else engine.pending=cur;
+  hideBan(); toast(t("t_yt_applied")); updateNowUI(TRACKS[cur].t,TRACKS[cur].a,TRACKS[cur]); };
+
+/* tabs */
+$$(".ptab").forEach(b=>b.onclick=()=>{ $$(".ptab").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  $$(".ptbody").forEach(x=>x.classList.toggle("on", x.dataset.body===b.dataset.tab)); });
+
+/* center controls */
+$("#searchInput").addEventListener("input",e=>{ filter.q=e.target.value.trim(); renderChart(); });
+$("#findBtn").onclick=()=>{ filter.q=$("#searchInput").value.trim(); renderChart(); toast(t("t_found")+visibleIdx().length); };
+$("#listenAll").onclick=()=>{ const v=visibleIdx(); if(v.length) playTrack(v[0]); };
+$("#chips").addEventListener("click",e=>{ const c=e.target.closest(".chip"); if(!c) return;
+  $$(".chip").forEach(x=>x.classList.remove("on")); c.classList.add("on"); filter.g=c.dataset.g; filter.mode="all"; renderChart(); });
+$("#sleepBtn").onclick=()=>{ const steps=[0,15,30,60]; sleepMin=steps[(steps.indexOf(sleepMin)+1)%steps.length];
+  clearTimeout(sleepTimer); if(sleepMin) sleepTimer=setTimeout(()=>{ engine.pause(); toast(t("t_sleep")+t("t_sleep_off")); },sleepMin*60000);
+  renderSleep(); toast(t("t_sleep")+(sleepMin?sleepMin+t("t_min"):t("t_sleep_off"))); };
+
+/* sidebar */
+function sideOn(el){ $$(".side-item").forEach(x=>x.classList.remove("on")); el.classList.add("on"); }
+$("#navHome").onclick=e=>{ sideOn(e.currentTarget); filter.mode="all"; filter.g="all"; filter.q=""; $("#searchInput").value="";
+  $$(".chip").forEach(x=>x.classList.toggle("on",x.dataset.g==="all")); renderChart(); document.getElementById("player").scrollIntoView({behavior:"smooth"}); };
+$("#navSearch").onclick=()=>{ $("#searchInput").focus(); document.getElementById("player").scrollIntoView({behavior:"smooth"}); };
+$("#navFav").onclick=e=>{ sideOn(e.currentTarget); filter.mode="fav"; renderChart(); };
+$("#navRated").onclick=e=>{ sideOn(e.currentTarget); filter.mode="rated"; renderChart(); };
+$("#navOffline").onclick=e=>{ sideOn(e.currentTarget); filter.mode="offline"; renderChart(); };
+$("#navLocal").onclick=()=>$("#fileInput").click();
+$("#navHistory").onclick=()=>{ openStats(); };
+$("#plsAdd").onclick=()=>{ const name=prompt(lang==="ru"?"Название плейлиста (сохранит текущую очередь):":"Playlist name (saves current queue):");
+  if(!name) return; const seq=(queueArr||TRACKS.map((_,i)=>i)).slice(Math.max(0,cur)); playlists.push({name,items:seq}); LS.set("vs_pls",playlists); renderPls(); toast(t("t_pls_new")+name); };
+function renderPls(){ $("#plsList").innerHTML=playlists.map((p,i)=>`<button class="pls-item" data-p="${i}">${p.name}<span>(${p.items.length})</span></button>`).join("")
+  || `<div style="padding:4px 12px;color:var(--mut2);font-size:12px">${lang==="ru"?"Пока пусто":"Empty yet"}</div>`; }
+$("#plsList").addEventListener("click",e=>{ const b=e.target.closest(".pls-item"); if(!b) return;
+  const p=playlists[+b.dataset.p]; if(p&&p.items.length){ queueArr=p.items.slice(); playTrack(queueArr[0]); toast(t("t_pls_load")); } });
+$("#widgetBtn").onclick=()=>$("#miniWidget").classList.toggle("show");
+$("#btnWidget").onclick=()=>$("#miniWidget").classList.toggle("show");
+$("#mwClose").onclick=()=>$("#miniWidget").classList.remove("show");
+$("#mwPlay").onclick=togglePlay; $("#mwNext").onclick=()=>nextTrack(false);
+$("#accentSel").addEventListener("change",e=>{ document.documentElement.style.setProperty("--acc",e.target.value);
+  document.documentElement.style.setProperty("--acc-soft",e.target.value+"22"); LS.set("vs_acc",e.target.value); });
+
+/* stats modal */
+function pushHistory(tr){ pushHistoryRaw(tr.t+" — "+tr.a); }
+function pushHistoryRaw(name){ history.unshift({n:name,ts:Date.now()}); history=history.slice(0,200); LS.set("vs_hist",history); }
+function openStats(){ const agg={}; history.forEach(h=>agg[h.n]=(agg[h.n]||0)+1);
+  const rows=Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  $("#statsBody").innerHTML=(rows.length?rows.map(([n,c])=>`<div class="mrow"><span>${n}</span><span>${c} ×</span></div>`).join("")
+    :`<div style="color:var(--mut2);font-size:13px">${lang==="ru"?"История пуста":"History is empty"}</div>`)
+    +`<div class="mrow" style="border:none;margin-top:8px"><span>${t("t_hist")}</span><span>${history.length}</span></div>`;
+  $("#statsModal").classList.add("show"); }
+$("#statsModal").onclick=()=>$("#statsModal").classList.remove("show");
+
+/* ═══════════ EQUALIZER ═══════════ */
+const PRESETS=[
+ {id:"flat", ru:"Плоский (по умолчанию)", en:"Flat (default)", v:[0,0,0,0,0,0,0,0,0,0]},
+ {id:"bass", ru:"Bass Boost", en:"Bass Boost", v:[7,6,4,2,0,0,0,0,0,0]},
+ {id:"vocal",ru:"Vocal", en:"Vocal", v:[-2,-1,0,2,4,4,3,1,0,0]},
+ {id:"treble",ru:"Treble Boost", en:"Treble Boost", v:[0,0,0,0,0,1,3,5,6,7]},
+ {id:"vshape",ru:"V-Shape", en:"V-Shape", v:[6,4,2,0,-1,-1,0,2,4,6]},
+ {id:"loud", ru:"Loudness", en:"Loudness", v:[5,3,1,0,0,0,1,3,5,6]},
+ {id:"night", ru:"Ночной (мягкий)", en:"Midnight (soft)", v:[3,2,1,0,-1,-2,-1,0,1,2]}
+];
+function buildEqPresetOptions(){ const sel=$("#eqPreset"); const curV=sel.value||"flat";
+  sel.innerHTML=PRESETS.map(p=>`<option value="${p.id}">${p[lang]}</option>`).join(""); sel.value=curV; }
+function buildEqBands(){
+  $("#eqBands").innerHTML=FREQS.map((f,i)=>`<div class="band">
+    <div class="gv" id="gv${i}">${(eqVals[i]||0).toFixed(1)}</div>
+    <div class="sl"><input type="range" min="-12" max="12" step="0.5" value="${eqVals[i]||0}" data-b="${i}"></div>
+    <label>${f>=1000?(f/1000)+"k":f}</label></div>`).join("");
+  $$("#eqBands input").forEach(inp=>inp.addEventListener("input",e=>{
+    const i=+e.target.dataset.b, v=parseFloat(e.target.value); eqVals[i]=v; LS.set("vs_eq",eqVals);
+    if(engine.filters[i]) engine.filters[i].gain.setTargetAtTime(v, engine.ctx.currentTime, .04);
+    $("#gv"+i).textContent=v.toFixed(1); $("#eqPreset").value="custom"; }));
+}
+$("#eqPreset").addEventListener("change",e=>{ const p=PRESETS.find(x=>x.id===e.target.value); if(!p) return;
+  eqVals=p.v.slice(); LS.set("vs_eq",eqVals); applyEqVals(); toast(t("t_eq")+p[lang]); });
+$("#eqReset").onclick=()=>{ eqVals=FREQS.map(()=>0); LS.set("vs_eq",eqVals); applyEqVals(); $("#eqPreset").value="flat"; };
+function applyEqVals(){ eqVals.forEach((v,i)=>{ const inp=$(`#eqBands input[data-b="${i}"]`); if(inp){ inp.value=v; $("#gv"+i).textContent=v.toFixed(1);} if(engine.filters[i]) engine.filters[i].gain.setTargetAtTime(v,engine.ctx.currentTime,.04); }); }
+
+/* ═══════════ VISUALIZER ═══════════ */
+const BARS=30; let barH=new Array(BARS).fill(.06), phase=0, freqData=null;
+(function(){ $("#viz").innerHTML=new Array(BARS).fill("<i></i>").join(""); })();
+function drawViz(){
+  const playing=engine.playing();
+  if(playing && engine.kind==="file" && engine.analyser){
+    if(!freqData) freqData=new Uint8Array(engine.analyser.frequencyBinCount);
+    engine.analyser.getByteFrequencyData(freqData);
+    for(let i=0;i<BARS;i++){ const idx=Math.floor(Math.pow(i/BARS,1.4)*freqData.length); const tgt=(freqData[idx]/255)*.95+.05; barH[i]+=(tgt-barH[i])*.45; }
+  } else if(playing){ phase+=.16;
+    for(let i=0;i<BARS;i++){ const tgt=.18+.62*Math.abs(Math.sin(phase+i*.42))*(.55+.45*Math.sin(phase*.7+i*1.7)); barH[i]+=(tgt-barH[i])*.3; }
+  } else for(let i=0;i<BARS;i++) barH[i]+=(.05-barH[i])*.25;
+  const els=$("#viz").children;
+  for(let i=0;i<BARS;i++) els[i].style.height=(barH[i]*100).toFixed(1)+"%";
+}
+
+/* ═══════════ LYRICS ═══════════ */
+let LY={lines:[],synced:true,source:""}; let lyOffset=LS.get("vs_lyroff",0); let lastIdx=-1;
+function parseLRC(txt){
+  const lines=[]; const re=/\[(\d{1,2}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g;
+  txt.split(/\r?\n/).forEach(raw=>{
+    const line=raw.trim(); if(!line) return;
+    let m, tags=[], mm;
+    re.lastIndex=0;
+    while((m=re.exec(line))){ let ms=0; if(m[3]) ms=m[3].length===3?+m[3]:(+m[3])*10; tags.push(+m[1]*60+ +m[2]+ms/1000); }
+    const text=line.replace(re,"").trim();
+    if(tags.length) tags.forEach(tt=>lines.push({t:tt,text}));
+    else if(text) lines.push({t:null,text});
+  });
+  const synced=lines.some(l=>l.t!=null);
+  if(synced){ lines.sort((a,b)=>(a.t??1e9)-(b.t??1e9)); }
+  return {lines,synced};
+}
+function applyLRC(txt,source){
+  LY.source=source;
+  if(!txt){ LY.lines=[]; LY.synced=false; }
+  else { const p=parseLRC(txt); LY.lines=p.lines; LY.synced=p.synced; }
+  const html=LY.lines.length? LY.lines.map((l,i)=>`<li data-i="${i}" data-t="${l.t??""}">${l.text||"&nbsp;"}</li>`).join("")
+    :`<li class="gap"></li><li style="cursor:default;color:var(--mut2)">${t("t_lyr_none")}</li>`;
+  ["#lyricsBox","#lyrBig"].forEach(sel=>{ $(sel).querySelector("ol").innerHTML=html; });
+  const srcLabel={lrclib:"LRCLIB · synced", "lrclib-plain":"LRCLIB · plain", cache:"CACHE", manual:"LOCAL LRC", none:"—"}[source]||source;
+  $("#lyrSrc").textContent=srcLabel; $("#lyrBigSrc").textContent=srcLabel;
+  $("#lyrBigNote").textContent = LY.synced? "" : (lang==="ru"?"без таймкодов — подсветка недоступна":"no timestamps — highlight unavailable");
+  lastIdx=-1;
+}
+async function loadLyrics(force){
+  const manual=LS.get("vs_lrc_manual",null);
+  if(manual && !force){ applyLRC(manual,"manual"); return; }
+  const base=[ `https://lrclib.net/api/get?artist_name=${enc(LRC_ARTIST)}&track_name=${enc(LRC_TRACK)}`,
+               `https://lrclib.net/api/search?q=${enc(LRC_ARTIST+" "+LRC_TRACK)}` ];
+  const proxies=[ u=>u, u=>`https://api.allorigins.win/raw?url=${enc(u)}`, u=>`https://api.codetabs.com/v1/proxy?quest=${enc(u)}` ];
+  for(const p of proxies){ for(const u of base){
+    try{ const r=await fetch(p(u)); if(!r.ok) continue; const j=await r.json();
+      const doc=Array.isArray(j)? (j.find(x=>x&&x.syncedLyrics)||j[0]) : j;
+      const lrc=doc&&(doc.syncedLyrics||doc.plainLyrics);
+      if(lrc){ LS.set("vs_lrc_cache",lrc); applyLRC(lrc, doc.syncedLyrics?"lrclib":"lrclib-plain"); toast(t("t_lyr_load")); return; }
+    }catch(e){}
+  } }
+  const cached=LS.get("vs_lrc_cache",null);
+  if(cached){ applyLRC(cached,"cache"); toast(t("t_lyr_cache")); return; }
+  applyLRC(null,"none"); toast(t("t_lyr_none"));
+}
+function cacheLyricsNow(){ const c=LS.get("vs_lrc_cache",null); if(c) LS.set("vs_lrc_cache",c); }
+function highlightLyrics(){
+  if(!LY.synced||!LY.lines.length) return;
+  const time=engine.time()+lyOffset; let idx=-1;
+  for(let i=0;i<LY.lines.length;i++){ if(LY.lines[i].t!=null && LY.lines[i].t<=time) idx=i; else break; }
+  if(idx===lastIdx) return; lastIdx=idx;
+  ["#lyricsBox","#lyrBig"].forEach(sel=>{ const box=$(sel); const lis=box.querySelectorAll("li[data-i]");
+    lis.forEach(li=>li.classList.toggle("on", +li.dataset.i===idx));
+    if(idx>=0 && box.offsetParent!==null){ const li=lis[idx]; if(li) box.scrollTo({top:Math.max(0,li.offsetTop-box.clientHeight*.42),behavior:"smooth"}); } });
+}
+function lyricClick(e){ const li=e.target.closest("li[data-i]"); if(!li||!LY.synced) return;
+  const tt=LY.lines[+li.dataset.i].t; if(tt!=null) seekTo(Math.max(0,tt+lyOffset)); }
+$("#lyricsBox").addEventListener("click",lyricClick);
+$("#lyrBig").addEventListener("click",lyricClick);
+function renderOff(){ $("#lyrOffVal").textContent=(lyOffset>=0?"+":"")+lyOffset.toFixed(1)+"s"; }
+$("#lyrOffMinus").onclick=()=>{ lyOffset=Math.max(-10,lyOffset-.5); LS.set("vs_lyroff",lyOffset); renderOff(); lastIdx=-2; };
+$("#lyrOffPlus").onclick =()=>{ lyOffset=Math.min(10,lyOffset+.5); LS.set("vs_lyroff",lyOffset); renderOff(); lastIdx=-2; };
+$("#lyrEdit").onclick=()=>{ const ed=$("#lyrEditor"); ed.classList.toggle("show");
+  if(ed.classList.contains("show")) $("#lyrTa").value=LS.get("vs_lrc_manual",null)||LS.get("vs_lrc_cache","")||""; };
+$("#lyrSave").onclick=()=>{ const v=$("#lyrTa").value.trim(); if(!v) return; LS.set("vs_lrc_manual",v); applyLRC(v,"manual");
+  $("#lyrEditor").classList.remove("show"); toast(t("t_lyr_ok")); };
+$("#lyrReset").onclick=()=>{ localStorage.removeItem("vs_lrc_manual"); $("#lyrEditor").classList.remove("show"); loadLyrics(true); };
+$("#lyrCancel").onclick=()=>$("#lyrEditor").classList.remove("show");
+
+/* ═══════════ SCREENSHOTS ═══════════ */
+function mockSVG(kind){
+  const P=(inner)=>`<svg xmlns='http://www.w3.org/2000/svg' width='640' height='400' viewBox='0 0 640 400'><rect width='640' height='400' fill='#050706'/>${inner}</svg>`;
+  let inner=`<rect x='14' y='14' width='612' height='372' rx='16' fill='#0a0d0c' stroke='rgba(255,255,255,.08)'/>`;
+  if(kind==="eq"){ for(let i=0;i<10;i++){ const x=60+i*58; inner+=`<line x1='${x}' y1='60' x2='${x}' y2='330' stroke='#1db954' stroke-width='5' stroke-linecap='round'/><circle cx='${x}' cy='${300-(i%4)*40}' r='9' fill='#fff'/><text x='${x}' y='356' fill='#6d7d76' font-size='13' font-family='Arial' text-anchor='middle'>${[32,64,125,250,500,"1k","2k","4k","8k","16k"][i]}</text>`; }
+    inner+=`<rect x='40' y='26' width='220' height='20' rx='10' fill='#161c19'/>`; }
+  if(kind==="lyrics"){ for(let i=0;i<9;i++){ const w=[300,420,360,390,330,410,350,380,300][i]; const on=i===3;
+    inner+=`<rect x='46' y='${52+i*34}' width='${w}' height='12' rx='6' fill='${on?"#1db954":"#1c2422"}'/>`; }
+    inner+=`<rect x='200' y='14' width='240' height='26' rx='13' fill='#1db954'/>`; }
+  if(kind==="now"){ inner+=`<rect x='40' y='40' width='300' height='190' rx='12' fill='#111614'/><circle cx='190' cy='135' r='42' fill='none' stroke='#1db954' stroke-width='10'/><circle cx='190' cy='135' r='14' fill='#1db954'/>`;
+    for(let i=0;i<24;i++){ const h=14+Math.abs(Math.sin(i*1.7))*46; inner+=`<rect x='${40+i*13}' y='${300-h}' width='8' height='${h}' rx='3' fill='#1db954'/>`; }
+    inner+=`<rect x='360' y='40' width='240' height='14' rx='7' fill='#202825'/><rect x='360' y='66' width='160' height='10' rx='5' fill='#161c19'/><circle cx='580' cy='52' r='16' fill='none' stroke='rgba(255,255,255,.2)' stroke-width='2'/>`; }
+  if(kind==="app"){ inner+=`<rect x='30' y='30' width='140' height='300' rx='12' fill='#0d1211'/><rect x='46' y='52' width='90' height='12' rx='6' fill='#1db954'/>`;
+    for(let i=0;i<6;i++) inner+=`<rect x='46' y='${86+i*26}' width='${100-(i%3)*18}' height='9' rx='4' fill='#1c2422'/>`;
+    inner+=`<rect x='186' y='30' width='290' height='300' rx='12' fill='#0d1211'/>`;
+    for(let i=0;i<7;i++) inner+=`<rect x='202' y='${58+i*38}' width='258' height='26' rx='7' fill='${i%2?"#111614":"#141a18"}'/>`;
+    inner+=`<rect x='492' y='30' width='118' height='300' rx='12' fill='#0d1211'/><rect x='504' y='46' width='94' height='70' rx='8' fill='#111614'/>`;
+    for(let i=0;i<14;i++){ const h=8+Math.abs(Math.sin(i*2.1))*26; inner+=`<rect x='${506+i*7}' y='${160-h}' width='4' height='${h}' rx='2' fill='#1db954'/>`; } }
+  return "data:image/svg+xml;utf8,"+enc(P(inner));
+}
+const SHOT_KINDS=["eq","lyrics","now","app"];
+(function buildShots(){
+  $("#shotsGrid").innerHTML=SHOT_KINDS.map((k,i)=>`<figure class="shot tilt reveal" data-m="${i}">
+    <img src="screens/screen${i+1}.png" data-fallback="${mockSVG(k)}" alt="VibeStream screen ${i+1}" loading="lazy">
+    <figcaption data-i18n="sh${i+1}">${t("sh"+(i+1))}</figcaption></figure>`).join("");
+  $$("#shotsGrid img").forEach(img=>{ img.addEventListener("error",()=>{ img.src=img.dataset.fallback; },{once:true}); });
+  $("#shotsGrid").addEventListener("click",e=>{ const f=e.target.closest("figure.shot"); if(!f) return;
+    $("#shotModalImg").src=f.querySelector("img").src; $("#shotModal").classList.add("show"); });
+  $("#shotModal").onclick=()=>$("#shotModal").classList.remove("show");
+})();
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ $("#shotModal").classList.remove("show"); $("#statsModal").classList.remove("show"); } });
+
+/* ═══════════ GITHUB RELEASE ═══════════ */
+(function loadRelease(){
+  $("#relTitle").textContent=t("dl_loading");
+  const fallback=()=>{ $("#relTitle").textContent=t("dl_fail");
+    $("#relMeta").textContent="github.com/"+REPO;
+    $("#relAssets").innerHTML=`<a class="btn btn-acc" href="https://github.com/${REPO}/releases/latest" target="_blank" rel="noopener">⤓ ${t("dl_page")}</a>`; };
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{headers:{Accept:"application/vnd.github+json"}})
+   .then(r=>{ if(!r.ok) throw 0; return r.json(); })
+   .then(d=>{
+     $("#relTitle").textContent=`VibeStream ${(d.tag_name||"").replace(/^v/,"")} · ${d.name||"RELEASE"}`;
+     const date=d.published_at?new Date(d.published_at).toLocaleDateString(lang==="ru"?"ru-RU":"en-GB",{day:"numeric",month:"long",year:"numeric"}):"";
+     $("#relMeta").textContent=date;
+     const assets=(d.assets||[]);
+     $("#relAssets").innerHTML = (assets.length? assets.map(a=>`<a class="btn btn-acc" href="${a.browser_download_url}" target="_blank" rel="noopener">⤓ ${a.name} · ${(a.size/1048576).toFixed(1)} MB</a>`).join("") : "")
+       + `<a class="btn btn-ghost" href="${d.zipball_url}" target="_blank" rel="noopener">${t("dl_src")}</a>`;
+   }).catch(fallback);
+})();
+
+/* ═══════════ ANIMATIONS ═══════════ */
+const io=new IntersectionObserver(es=>es.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); } }),{threshold:.12});
+function observeReveals(){ $$(".reveal:not(.in)").forEach(el=>io.observe(el)); }
+document.addEventListener("mousemove",e=>{
+  const c=e.target.closest&&e.target.closest(".tilt"); if(!c) return;
+  const r=c.getBoundingClientRect();
+  const px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+  c.style.transform=`perspective(760px) rotateX(${(-py*5).toFixed(2)}deg) rotateY(${(px*6).toFixed(2)}deg) translateY(-4px)`;
+  c.style.transition="transform .06s linear";
+});
+document.addEventListener("mouseover",e=>{ const c=e.target.closest&&e.target.closest(".tilt"); if(!c) return; });
+["featGrid","shotsGrid"].forEach(id=>{ const g=document.getElementById(id); if(!g) return;
+  g.addEventListener("mouseleave",()=>g.querySelectorAll(".tilt").forEach(c=>{ c.style.transition="transform .45s cubic-bezier(.2,.7,.3,1)"; c.style.transform=""; }),true); });
+document.addEventListener("mouseout",e=>{ const c=e.target.closest&&e.target.closest(".tilt");
+  if(c && !c.contains(e.relatedTarget)){ c.style.transition="transform .45s cubic-bezier(.2,.7,.3,1)"; c.style.transform=""; } });
+
+/* ═══════════ MAIN TICK ═══════════ */
+setInterval(()=>{
+  const playing=engine.playing(), time=engine.time(), dur=engine.dur();
+  $("#icPlay").style.display=playing?"none":"";
+  $("#icPause").style.display=playing?"":"none";
+  $("#mwPlay").textContent=playing?"⏸":"▶";
+  if(!tlDrag){ const p=dur>0?Math.min(1000,(time/dur)*1000):0; const r=$("#tlRange"); r.value=p; setRangeFill(r,p/10); }
+  $("#tlCur").textContent=fmt(time); $("#tlTot").textContent=fmt(dur);
+  drawViz(); highlightLyrics();
+},250);
+
+/* ═══════════ INIT ═══════════ */
+(function init(){
+  const acc=LS.get("vs_acc",null); if(acc){ document.documentElement.style.setProperty("--acc",acc); $("#accentSel").value=acc; }
+  const vol=LS.get("vs_vol",80); $("#volRange").value=vol; setRangeFill($("#volRange"),vol);
+  setRangeFill($("#tlRange"),0);
+  buildEqBands(); buildEqPresetOptions(); renderPls(); renderOff(); renderSleep();
+  applyLang(); observeReveals();
+  loadYTAPI(); loadLyrics(false);
+  engine.setVol(vol);
+  $("#heroListen").onclick=()=>{ document.getElementById("player").scrollIntoView({behavior:"smooth"}); playTrack(0); };
+  $("#langRu").onclick=()=>{ lang="ru"; LS.set("vs_lang",lang); applyLang(); };
+  $("#langEn").onclick=()=>{ lang="en"; LS.set("vs_lang",lang); applyLang(); };
+  updateNowUI(null,null,null);
+  setTimeout(observeReveals,300);
+})();
+</script>
+</body>
+</html>
